@@ -573,6 +573,86 @@ profit/loss never borrow the accent, and the accent never signals gain.
 - Buttons say exactly what happens; the toast confirms it happened
 - Errors explain what went wrong and what to do next. No apologies
 
+### Tokens, as built
+
+Defined in `app/globals.css` under `@theme`. **Change them here first, then
+there** — this table is the vocabulary the rest of this section relies on.
+
+| Token | Value | Used for |
+|---|---|---|
+| `--color-ground` | `#0b0b10` | Page background. Deep neutral, never `#000` |
+| `--color-surface` | `#14141c` | Cards |
+| `--color-surface-high` | `#1d1d28` | Raised surfaces, active segments |
+| `--color-hairline` | `#262633` | Card borders, dividers |
+| `--color-hairline-bright` | `#363648` | Input borders, chips |
+| `--color-ink` | `#f2f2f7` | Primary text |
+| `--color-ink-muted` | `#9e9eb3` | Body text |
+| `--color-ink-faint` | `#6b6b80` | Labels, hints |
+| `--color-accent` | `#7c5cff` | **Brand and actions only** |
+| `--color-accent-bright` | `#9a80ff` | Transaction hashes, links |
+| `--color-gain` | `#3ddc97` | Profit. **Never brand** |
+| `--color-loss` | `#ff6b6b` | Loss, and the button that spends real money |
+
+**The accent never signals money and money never uses the accent.** That rule is
+why the Live button is drawn in the loss colour and the payoff chart's profit
+region uses the gain colour.
+
+### Component vocabulary
+
+Utility classes in `app/globals.css`. Use these rather than inventing new ones.
+
+| Class | What it is |
+|---|---|
+| `.card` | Surface, hairline border, `1.5rem` radius |
+| `.cta` | The one primary action per screen. Accent background |
+| `.ghost` | Secondary action. Bordered, never competes with `.cta` |
+| `.eyebrow` | Small uppercase mono label |
+| `.data` | Anything numeric. Mono, `tabular-nums` |
+| `.display` | Headings. Tight tracking, balanced wrap |
+| `.animate-land` / `.animate-hash` | The fill-landing moment. **Nothing else animates** |
+
+Type: **Bricolage Grotesque** display, **JetBrains Mono** for data. Both
+self-hosted by `next/font` so there is no external request on venue wifi.
+
+### Layout and breakpoints
+
+One breakpoint carries the design. Below `md` is the real target.
+
+| Width | Navigation | Content |
+|---|---|---|
+| `< sm` (phone) | Bottom tab bar; header has wordmark + mode switch | Single column, `px-5` |
+| `sm`–`md` | Same | Two-column figure grids appear |
+| `>= md` | Destinations move inline into the header; tab bar hidden | `max-w-5xl` centred |
+
+Page shell lives in `app/layout.tsx`: sticky header, `main` with `pb-28` on
+phones to clear the fixed tab bar, `TabBar` last.
+
+### Screens
+
+| Screen | Route | The one thing it must do |
+|---|---|---|
+| Trade | `/` | Get a view typed and interpreted. Flow first, market pulse below |
+| Preview | `/` step 02 | **Maximum loss as the largest element on screen** |
+| Proof | `/` step 03 | The hash, large and selectable, with the explorer link under it |
+| Feed | `/feed` | Every row links to its transaction |
+| Board | `/leaderboard` | Rank honestly, or stay empty |
+| You | `/profile` | Custody stated plainly |
+
+### How to change the interface
+
+**Edit this section before writing any component.** The order matters, because
+the tokens are the shared vocabulary:
+
+1. Change the principle, token or screen spec **here**
+2. Say which of the rules above it breaks, if any, and why that is acceptable
+3. Then change `app/globals.css`, then `components/`
+4. Verify at **375x812** before anything else — that is the size being designed for
+5. `npm run check` before committing
+
+**Never change `lib/`** to accommodate an interface change. The integration layer
+does not depend on `components/`, and keeping it that way is what makes visual
+work safe to do on a branch.
+
 ## 4.4 The demo
 
 1. **Describe a view in plain language.** "ETH drops below 2,200 this week."
