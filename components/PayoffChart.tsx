@@ -79,8 +79,8 @@ export function PayoffChart({
             <rect x="0" y={zeroY} width={width} height={height - zeroY} />
           </clipPath>
           <linearGradient id="profit-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-lime)" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="var(--color-lime)" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="var(--color-gain)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--color-gain)" stopOpacity="0.02" />
           </linearGradient>
           <linearGradient id="loss-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--color-loss)" stopOpacity="0.04" />
@@ -167,13 +167,13 @@ export function PayoffChart({
 
         {/* Break-even marker. */}
         {breakeven !== null && breakeven >= minPrice && breakeven <= maxPrice && (
-          <circle cx={x(breakeven)} cy={zeroY} r="3.5" fill="var(--color-lime)" />
+          <circle cx={x(breakeven)} cy={zeroY} r="3.5" fill="var(--color-ink)" />
         )}
 
         <path
           d={line}
           fill="none"
-          stroke="var(--color-lime)"
+          stroke="var(--color-accent)"
           strokeWidth="2"
           strokeLinejoin="round"
         />

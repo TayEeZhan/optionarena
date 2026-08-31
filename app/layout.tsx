@@ -1,10 +1,9 @@
-import type { Metadata } from 'next';
-import { Space_Grotesk, JetBrains_Mono } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Bricolage_Grotesque, JetBrains_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 
 import './globals.css';
-import { Sidebar } from '@/components/Sidebar';
-import { TopBar } from '@/components/TopBar';
+import { Header, TabBar } from '@/components/Nav';
 import { ModeProvider } from '@/components/ModeProvider';
 import { canSign } from '@/lib/thetanuts/client';
 
@@ -13,9 +12,9 @@ import { canSign } from '@/lib/thetanuts/client';
  * No external request on load, no flash of unstyled text, and the demo still
  * looks right if the venue's wifi is hostile.
  */
-const display = Space_Grotesk({
+const display = Bricolage_Grotesque({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-display-loaded',
   display: 'swap',
 });
@@ -33,6 +32,17 @@ export const metadata: Metadata = {
     'Describe your view, understand the risk, prove the trade. On-chain options on Base.',
 };
 
+/**
+ * Mobile-first, so the viewport is declared rather than inherited. The theme
+ * colour matches the ground so the phone's status bar does not sit on a
+ * different background than the page.
+ */
+export const viewport: Viewport = {
+  themeColor: '#0b0b10',
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Whether the live path is even available is decided on the server, so the
   // browser is never told anything about the key beyond yes or no.
@@ -42,22 +52,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
       <body className="min-h-screen">
         <ModeProvider liveAvailable={liveAvailable}>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <TopBar />
-              <main className="min-w-0 flex-1 px-8 py-8">{children}</main>
-            </div>
-          </div>
+          <Header />
+          {/* The bottom padding clears the fixed tab bar on phones. */}
+          <main className="mx-auto max-w-5xl px-5 pt-7 pb-28 md:pb-16">{children}</main>
+          <TabBar />
         </ModeProvider>
         <Toaster
           theme="dark"
-          position="bottom-right"
+          position="top-center"
           toastOptions={{
             style: {
               background: 'var(--color-surface-high)',
               border: '1px solid var(--color-hairline-bright)',
               color: 'var(--color-ink)',
+              borderRadius: '1rem',
             },
           }}
         />

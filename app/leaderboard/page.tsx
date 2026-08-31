@@ -14,10 +14,12 @@ export default async function LeaderboardPage() {
   const executed = strategies.filter((s) => s.txHash);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div>
       <p className="eyebrow">Leaderboard</p>
-      <h1 className="display mt-2 text-4xl font-semibold">Ranked by risk-adjusted return</h1>
-      <p className="mt-2 max-w-2xl text-[0.9rem] leading-relaxed text-[var(--color-ink-muted)]">
+      <h1 className="display mt-2 text-[2.3rem] font-extrabold sm:text-[3rem]">
+        Ranked by risk-adjusted return
+      </h1>
+      <p className="mt-3 max-w-2xl text-[0.95rem] leading-relaxed text-[var(--color-ink-muted)]">
         Return per unit of capital risked, not raw percentage gain. A trader needs at least{' '}
         {MIN_TRADES_TO_RANK} settled trades before ranking, so one lucky trade cannot top the board.
       </p>

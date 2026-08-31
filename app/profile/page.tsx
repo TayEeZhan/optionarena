@@ -10,9 +10,11 @@ export default async function ProfilePage() {
   const address = signerAddress();
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div>
       <p className="eyebrow">My profile</p>
-      <h1 className="display mt-2 text-4xl font-semibold">Your track record</h1>
+      <h1 className="display mt-2 text-[2.3rem] font-extrabold sm:text-[3rem]">
+        Your track record
+      </h1>
 
       <div className="card mt-6 p-5">
         <p className="eyebrow">Trading wallet</p>
@@ -50,7 +52,7 @@ export default async function ProfilePage() {
                 href={explorerTx(s.txHash!)}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="data mt-1 block truncate text-[0.72rem] text-[var(--color-lime)] hover:underline"
+                className="data mt-1 block truncate text-[0.72rem] text-[var(--color-accent-bright)] hover:underline"
               >
                 {s.txHash}
               </a>

@@ -14,10 +14,12 @@ export default async function FeedPage() {
   const strategies = await getStore().list();
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div>
       <p className="eyebrow">Strategy feed</p>
-      <h1 className="display mt-2 text-4xl font-semibold">What people traded</h1>
-      <p className="mt-2 text-[0.9rem] text-[var(--color-ink-muted)]">
+      <h1 className="display mt-2 text-[2.3rem] font-extrabold sm:text-[3rem]">
+        What people traded
+      </h1>
+      <p className="mt-3 text-[0.95rem] leading-relaxed text-[var(--color-ink-muted)]">
         Every executed strategy carries its transaction hash, so you can check it yourself.
       </p>
 
@@ -44,7 +46,7 @@ export default async function FeedPage() {
                 <span
                   className={`eyebrow shrink-0 rounded-full px-2.5 py-1 ${
                     strategy.txHash
-                      ? 'bg-[var(--color-lime)]/12 text-[var(--color-lime)]'
+                      ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent-bright)]'
                       : 'bg-[var(--color-surface-high)] text-[var(--color-ink-faint)]'
                   }`}
                 >
@@ -80,7 +82,7 @@ export default async function FeedPage() {
                   href={explorerTx(strategy.txHash)}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="data mt-4 block truncate text-[0.75rem] text-[var(--color-lime)] hover:underline"
+                  className="data mt-4 block truncate text-[0.75rem] text-[var(--color-accent-bright)] hover:underline"
                 >
                   {strategy.txHash}
                 </a>
