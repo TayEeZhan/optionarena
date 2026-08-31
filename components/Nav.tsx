@@ -29,6 +29,7 @@ function isActive(pathname: string, href: string): boolean {
 
 export function Header() {
   const pathname = usePathname();
+  const { liveAvailable } = useMode();
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--color-hairline)] bg-[var(--color-ground)]/85 backdrop-blur-md">
@@ -62,6 +63,21 @@ export function Header() {
 
         <ModeSwitch />
       </div>
+
+      {/*
+       * Why live is unavailable, at every width.
+       *
+       * This used to sit beside the mode switch, where it had to be hidden on
+       * phones for space — which left a greyed-out Live button with no visible
+       * reason and no hover to explain it. The reason is part of the custody
+       * honesty, so it gets its own line rather than competing for the header.
+       */}
+      {!liveAvailable && (
+        <p className="border-t border-[var(--color-hairline)] bg-[var(--color-surface)] px-5 py-2 text-center text-[0.75rem] leading-relaxed text-[var(--color-ink-muted)]">
+          No signing key on this server, so this is demo mode only. The prices and the maximum loss
+          are real; nothing can be signed.
+        </p>
+      )}
     </header>
   );
 }
@@ -77,36 +93,30 @@ function ModeSwitch() {
   const { mode, setMode, liveAvailable } = useMode();
 
   return (
-    <div className="flex items-center gap-2.5">
-      {/* Why live is unavailable, said plainly. A disabled button with only a
-          tooltip hides the reason on a phone, where there is no hover. */}
-      {!liveAvailable && <span className="eyebrow hidden sm:inline">No signing key</span>}
-
-      <div
-        className="flex items-center gap-0.5 rounded-full border border-[var(--color-hairline-bright)] bg-[var(--color-surface)] p-1"
-        role="group"
-        aria-label="Trading mode"
-      >
-        <ModeButton
-          active={mode === 'demo'}
-          onClick={() => setMode('demo')}
-          label="Demo"
-          tone="neutral"
-          title="Simulated. Real prices, no signature, no money moves."
-        />
-        <ModeButton
-          active={mode === 'live'}
-          onClick={() => setMode('live')}
-          label="Live"
-          tone="live"
-          disabled={!liveAvailable}
-          title={
-            liveAvailable
-              ? 'Real money on Base mainnet.'
-              : 'Unavailable: the server has no signing key.'
-          }
-        />
-      </div>
+    <div
+      className="flex items-center gap-0.5 rounded-full border border-[var(--color-hairline-bright)] bg-[var(--color-surface)] p-1"
+      role="group"
+      aria-label="Trading mode"
+    >
+      <ModeButton
+        active={mode === 'demo'}
+        onClick={() => setMode('demo')}
+        label="Demo"
+        tone="neutral"
+        title="Simulated. Real prices, no signature, no money moves."
+      />
+      <ModeButton
+        active={mode === 'live'}
+        onClick={() => setMode('live')}
+        label="Live"
+        tone="live"
+        disabled={!liveAvailable}
+        title={
+          liveAvailable
+            ? 'Real money on Base mainnet.'
+            : 'Unavailable: the server has no signing key.'
+        }
+      />
     </div>
   );
 }
