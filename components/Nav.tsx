@@ -77,30 +77,36 @@ function ModeSwitch() {
   const { mode, setMode, liveAvailable } = useMode();
 
   return (
-    <div
-      className="flex items-center gap-0.5 rounded-full border border-[var(--color-hairline-bright)] bg-[var(--color-surface)] p-1"
-      role="group"
-      aria-label="Trading mode"
-    >
-      <ModeButton
-        active={mode === 'demo'}
-        onClick={() => setMode('demo')}
-        label="Demo"
-        tone="neutral"
-        title="Simulated. Real prices, no signature, no money moves."
-      />
-      <ModeButton
-        active={mode === 'live'}
-        onClick={() => setMode('live')}
-        label="Live"
-        tone="live"
-        disabled={!liveAvailable}
-        title={
-          liveAvailable
-            ? 'Real money on Base mainnet.'
-            : 'Unavailable: the server has no signing key.'
-        }
-      />
+    <div className="flex items-center gap-2.5">
+      {/* Why live is unavailable, said plainly. A disabled button with only a
+          tooltip hides the reason on a phone, where there is no hover. */}
+      {!liveAvailable && <span className="eyebrow hidden sm:inline">No signing key</span>}
+
+      <div
+        className="flex items-center gap-0.5 rounded-full border border-[var(--color-hairline-bright)] bg-[var(--color-surface)] p-1"
+        role="group"
+        aria-label="Trading mode"
+      >
+        <ModeButton
+          active={mode === 'demo'}
+          onClick={() => setMode('demo')}
+          label="Demo"
+          tone="neutral"
+          title="Simulated. Real prices, no signature, no money moves."
+        />
+        <ModeButton
+          active={mode === 'live'}
+          onClick={() => setMode('live')}
+          label="Live"
+          tone="live"
+          disabled={!liveAvailable}
+          title={
+            liveAvailable
+              ? 'Real money on Base mainnet.'
+              : 'Unavailable: the server has no signing key.'
+          }
+        />
+      </div>
     </div>
   );
 }
