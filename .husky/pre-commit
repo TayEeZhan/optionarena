@@ -1,0 +1,2 @@
+# Format and lint only what is staged. Fast enough to keep, so it stays on.
+npx lint-staged

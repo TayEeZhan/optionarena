@@ -4,14 +4,14 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ExecutedStrategy } from '../agent/schema';
+import { PostgresStore } from './postgres';
 
 /**
  * Where executed strategies live.
  *
- * The store is an interface with a file-backed implementation, so the product
- * runs with no configuration at all. Setting DATABASE_URL is the seam for
- * Postgres: implement `PostgresStore` against this same interface and switch in
- * `getStore`. Nothing above this file changes.
+ * Two implementations behind one interface. The file store means the product
+ * runs with no configuration at all; `PostgresStore` takes over as soon as
+ * DATABASE_URL is set. Nothing above this file knows or cares which is in use.
  *
  * Every executed row carries its transaction hash. That hash is the product's
  * proof, so it is written once, at execution, and never derived from anything.
@@ -58,9 +58,27 @@ class FileStore implements StrategyStore {
 
 let store: StrategyStore | null = null;
 
+/**
+ * The store this deployment uses.
+ *
+ * Postgres when DATABASE_URL is set, the local file otherwise. Set it in
+ * production: a serverless filesystem is read-only and per-invocation, so the
+ * file store would silently lose every strategy on the deployed demo.
+ */
 export function getStore(): StrategyStore {
-  if (!store) store = new FileStore();
+  if (store) return store;
+
+  const url = process.env.DATABASE_URL;
+  // The Postgres driver is only constructed when a connection string exists,
+  // so a local run never opens a connection and never needs the variable.
+  store = url ? new PostgresStore(url) : new FileStore();
+
   return store;
+}
+
+/** Which store is in use. Shown on the profile page so it is never a mystery. */
+export function storeKind(): 'postgres' | 'file' {
+  return process.env.DATABASE_URL ? 'postgres' : 'file';
 }
 
 /**

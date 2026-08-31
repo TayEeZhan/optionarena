@@ -1,0 +1,17 @@
+# Normalise line endings so four people on Windows and macOS do not produce
+# whole-file diffs against each other. Without this, every save on a Windows
+# machine rewrites every line and merges become unreadable.
+* text=auto eol=lf
+
+# Binary files must never be normalised.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+
+# Generated. Collapse in diffs and reviews.
+package-lock.json linguist-generated=true -diff

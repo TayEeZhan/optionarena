@@ -51,7 +51,8 @@ export function PayoffChart({
   const span = highPnl - lowPnl || 1;
 
   const x = (price: number) =>
-    padding.left + ((price - minPrice) / (maxPrice - minPrice || 1)) * (width - padding.left - padding.right);
+    padding.left +
+    ((price - minPrice) / (maxPrice - minPrice || 1)) * (width - padding.left - padding.right);
 
   const y = (pnl: number) =>
     padding.top + (1 - (pnl - lowPnl) / span) * (height - padding.top - padding.bottom);
@@ -64,7 +65,12 @@ export function PayoffChart({
 
   return (
     <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="Payoff at expiry">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full"
+        role="img"
+        aria-label="Payoff at expiry"
+      >
         <defs>
           <clipPath id="profit-region">
             <rect x="0" y="0" width={width} height={zeroY} />
@@ -147,7 +153,13 @@ export function PayoffChart({
               stroke="var(--color-ink-muted)"
               strokeWidth="1"
             />
-            <text x={x(spot) + 5} y={padding.top + 10} className="data" fontSize="10" fill="var(--color-ink-muted)">
+            <text
+              x={x(spot) + 5}
+              y={padding.top + 10}
+              className="data"
+              fontSize="10"
+              fill="var(--color-ink-muted)"
+            >
               spot
             </text>
           </>
@@ -158,10 +170,22 @@ export function PayoffChart({
           <circle cx={x(breakeven)} cy={zeroY} r="3.5" fill="var(--color-lime)" />
         )}
 
-        <path d={line} fill="none" stroke="var(--color-lime)" strokeWidth="2" strokeLinejoin="round" />
+        <path
+          d={line}
+          fill="none"
+          stroke="var(--color-lime)"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
 
         {/* Price axis ends. */}
-        <text x={padding.left} y={height - 8} className="data" fontSize="10" fill="var(--color-ink-faint)">
+        <text
+          x={padding.left}
+          y={height - 8}
+          className="data"
+          fontSize="10"
+          fill="var(--color-ink-faint)"
+        >
           {Math.round(minPrice).toLocaleString('en-US')}
         </text>
         <text

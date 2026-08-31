@@ -55,7 +55,9 @@ async function main() {
   console.log('=========================================');
   console.log(`Chain     : ${chainConfig.name} (${chainConfig.chainId})`);
   console.log(`OptionBook: ${chainConfig.contracts.optionBook}`);
-  console.log(`Mode      : ${options.live ? 'LIVE - WILL SPEND REAL MONEY' : 'dry run - signs nothing'}`);
+  console.log(
+    `Mode      : ${options.live ? 'LIVE - WILL SPEND REAL MONEY' : 'dry run - signs nothing'}`,
+  );
   console.log(`Wallet    : ${signerAddress() ?? 'none configured'}`);
   console.log(`Ceiling   : ${maxTradeUsdc()} per trade`);
   console.log(`Budget    : ${options.budget}`);
@@ -75,8 +77,7 @@ async function main() {
   }
 
   // Prefer a USDC-collateralised contract: the budget is a USDC number.
-  const target =
-    buyable.find((i) => i.collateral.symbol.includes('USDC')) ?? buyable[0];
+  const target = buyable.find((i) => i.collateral.symbol.includes('USDC')) ?? buyable[0];
 
   console.log(`\nChose: ${describeInstrument(target)}`);
   console.log(`  paid in   : ${target.collateral.symbol} (${target.collateral.decimals} decimals)`);

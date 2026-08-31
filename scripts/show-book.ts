@@ -67,14 +67,18 @@ async function main() {
   );
 
   const quote = quoteInstrument(target, budget, spot[target.underlying] ?? null);
-  console.log(`  Paid in:                ${quote.collateralSymbol} (${quote.collateralDecimals} decimals)`);
+  console.log(
+    `  Paid in:                ${quote.collateralSymbol} (${quote.collateralDecimals} decimals)`,
+  );
   console.log(`  Premium (what you pay): ${quoteAmount(quote, quote.premium)}`);
   console.log(`  MAXIMUM LOSS:           ${quoteAmount(quote, quote.maxLoss)}`);
   console.log(
     `  Maximum gain:           ${quote.maxGain === null ? 'unbounded (long call)' : quoteAmount(quote, quote.maxGain)}`,
   );
   console.log(`  Breakeven:              ${quote.breakeven ? quote.breakeven.toFixed(2) : 'n/a'}`);
-  console.log(`  Contracts:              ${fromUnits(quote.numContracts, quote.collateralDecimals)}`);
+  console.log(
+    `  Contracts:              ${fromUnits(quote.numContracts, quote.collateralDecimals)}`,
+  );
   console.log(`  Payoff samples:         ${quote.payoff.length}`);
   for (const note of quote.notes) console.log(`  Note: ${note}`);
   console.log();

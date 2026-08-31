@@ -10,21 +10,32 @@
     "dev": "next dev -p 5190",
     "build": "next build",
     "start": "next start -p 5190",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:fill": "tsx --conditions=react-server scripts/verify-fill.ts",
-    "book": "tsx --conditions=react-server scripts/show-book.ts"
+    "book": "tsx --conditions=react-server scripts/show-book.ts",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "check": "npm run typecheck && npm run lint && npm test",
+    "prepare": "husky"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
+    "@neondatabase/serverless": "^1.1.0",
     "@thetanuts-finance/thetanuts-client": "^0.3.0",
+    "drizzle-orm": "^0.45.2",
     "ethers": "^6.17.0",
     "next": "^16.3.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "server-only": "^0.0.1",
+    "sonner": "^2.0.8",
     "zod": "^4.5.4"
   },
   "devDependencies": {
@@ -33,9 +44,26 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "dotenv": "^17.3.1",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.3",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^5.7.0",
     "vitest": "^4.1.11"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,css}": [
+      "prettier --write"
+    ]
   }
 }

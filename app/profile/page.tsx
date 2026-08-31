@@ -1,4 +1,4 @@
-import { getStore } from '@/lib/db/store';
+import { getStore, storeKind } from '@/lib/db/store';
 import { signerAddress, canSign, explorerTx } from '@/lib/thetanuts/client';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export default async function ProfilePage() {
         <p className="eyebrow">Trading wallet</p>
         {canSign() && address ? (
           <>
-            <p className="data mt-2 break-all text-[0.95rem] text-[var(--color-ink)]">{address}</p>
+            <p className="data mt-2 text-[0.95rem] break-all text-[var(--color-ink)]">{address}</p>
             <p className="mt-2 text-[0.75rem] leading-relaxed text-[var(--color-ink-faint)]">
               OptionArena signs server-side. This is the shared wallet the app trades from, not a
               wallet you connected. See the README for why.
@@ -30,6 +30,10 @@ export default async function ProfilePage() {
           </p>
         )}
       </div>
+
+      <p className="eyebrow mt-3">
+        Storage: {storeKind() === 'postgres' ? 'Postgres' : 'local file, not for production'}
+      </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <Tile label="Strategies built" value={String(strategies.length)} />

@@ -1,4 +1,5 @@
 import { Flow } from '@/components/Flow';
+import { AutoRefresh } from '@/components/AutoRefresh';
 import { fetchPulse } from '@/lib/thetanuts/book';
 import { chainConfig } from '@/lib/thetanuts/client';
 
@@ -17,6 +18,7 @@ export default async function OverviewPage() {
 
   return (
     <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <AutoRefresh seconds={60} />
       <div className="min-w-0">
         <Flow />
       </div>
@@ -52,11 +54,16 @@ export default async function OverviewPage() {
 
               <div className="mt-4 space-y-1.5">
                 {pulse.byUnderlying.map((row) => (
-                  <div key={row.underlying} className="flex items-center justify-between text-[0.78rem]">
+                  <div
+                    key={row.underlying}
+                    className="flex items-center justify-between text-[0.78rem]"
+                  >
                     <span className="data text-[var(--color-ink-muted)]">{row.underlying}</span>
                     <span
                       className={`data ${
-                        row.buyable > 0 ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)]'
+                        row.buyable > 0
+                          ? 'text-[var(--color-ink)]'
+                          : 'text-[var(--color-ink-faint)]'
                       }`}
                       title={
                         row.buyable > 0

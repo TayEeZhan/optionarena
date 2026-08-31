@@ -58,7 +58,7 @@ export function ProofPanel({
         {execution.live && execution.txHash ? (
           <>
             <p className="eyebrow">Transaction hash</p>
-            <p className="data mt-3 break-all text-[1.05rem] leading-relaxed text-[var(--color-lime)] select-all">
+            <p className="data mt-3 text-[1.05rem] leading-relaxed break-all text-[var(--color-lime)] select-all">
               {execution.txHash}
             </p>
 

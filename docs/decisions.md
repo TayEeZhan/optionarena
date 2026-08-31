@@ -145,14 +145,26 @@ slippage check at step 03 with a 2% tolerance.
 
 ## 8. Persistence
 
-`lib/db/store.ts` is an interface with a file-backed implementation, so the
-product runs with no configuration. `DATABASE_URL` is the seam for Postgres:
-implement the same interface and switch in `getStore`. Nothing above it changes.
+`lib/db/store.ts` is one interface with two implementations. The file store means
+the product runs with no configuration at all. `PostgresStore` takes over as soon
+as `DATABASE_URL` is set. Nothing above that file knows which is in use.
 
-This is deliberately less than the brief asked for. A hosted Postgres needs an
-account the build machine does not have, and blocking the whole product on that
-would have been the wrong trade. Provisioning Neon or Supabase and writing the
-Postgres implementation is a contained task for whoever owns the data lane.
+**Postgres is required in production, not optional.** Vercel's filesystem is
+read-only and per-invocation, so the file store silently loses every strategy on
+the deployed URL: the feed and leaderboard would be empty for the judges. This
+was nearly shipped as a working local demo with a broken deployment.
+
+Drizzle with the Neon HTTP driver, because it works in a serverless function
+without holding a connection open between invocations. Schema in
+`lib/db/schema.ts` covers `strategies`, `signals` and `users`, so the P3 signals
+lane starts against a real table rather than inventing one mid-week.
+
+Amounts are stored as `text`, deliberately. They are exact decimal strings from
+`decimals.ts`, and a float column would reintroduce the rounding error that whole
+module exists to prevent.
+
+Remaining for the data lane: provision the database, run `npm run db:push`, and
+set `DATABASE_URL` in Vercel.
 
 ---
 
@@ -182,3 +194,31 @@ Date:
 ```
 
 Until that hash is in this file, the Track 2 entry is not yet valid.
+
+---
+
+## 10. Tooling added for a four-person week
+
+Chosen to remove friction between four people on one repo, not to add ceremony.
+
+| Addition | What it prevents |
+|---|---|
+| `.gitattributes` with `eol=lf` | Windows and macOS machines rewriting whole files and making merges unreadable |
+| ESLint with custom rules | `parseUnits` imported outside `decimals.ts`, and `any` in code that moves money |
+| Prettier and `.editorconfig` | Formatting arguments in review, and diffs full of whitespace |
+| Husky and lint-staged | Unformatted or failing code reaching a branch someone else pulls |
+| GitHub Actions CI | A broken `main` discovered on demo day. Also fails on a committed key |
+| Drizzle and Neon Postgres | The deployed feed silently losing every strategy |
+| `next/font` | An external font request on load, and a flash of unstyled text on venue wifi |
+| sonner | Execution outcomes that are easy to miss on a projector |
+| `vercel.json` | A mainnet fill timing out at the default function limit |
+
+**Deliberately not added.** A component library, because the visual direction is
+pinned and shadcn would fight it. A data-fetching library, because the flow makes
+two POST requests and TanStack Query would be more code for less clarity. A state
+manager, because the only shared state is the demo/live mode and React context
+already holds it.
+
+The single most important line here: **`DATABASE_URL` must be set in production.**
+Vercel's filesystem is read-only and per-invocation, so the file store loses
+everything on the deployed URL. Locally it needs no configuration at all.

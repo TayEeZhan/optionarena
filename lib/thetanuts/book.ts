@@ -207,9 +207,7 @@ export async function fetchBuyable(
     }
   }
 
-  return [...best.values()].sort(
-    (a, b) => a.expiry - b.expiry || a.strikes[0] - b.strikes[0],
-  );
+  return [...best.values()].sort((a, b) => a.expiry - b.expiry || a.strikes[0] - b.strikes[0]);
 }
 
 /** A compact summary of what the book currently offers. */
@@ -227,10 +225,7 @@ export interface MarketPulse {
 export async function fetchPulse(): Promise<MarketPulse> {
   const client = readClient();
 
-  const [book, health] = await Promise.all([
-    fetchBook(),
-    client.api.getHealth().catch(() => null),
-  ]);
+  const [book, health] = await Promise.all([fetchBook(), client.api.getHealth().catch(() => null)]);
 
   const buyable = book.filter((i) => !i.makerIsBuying && i.availableCollateral > 0n);
   const underlyings = [...new Set(book.map((i) => i.underlying))];
@@ -247,8 +242,7 @@ export async function fetchPulse(): Promise<MarketPulse> {
       }))
       .sort((a, b) => b.total - a.total),
     nextExpiry: book.length ? Math.min(...book.map((i) => i.expiry)) : null,
-    indexerLagBlocks:
-      health && typeof health.lagBlocks === 'number' ? health.lagBlocks : null,
+    indexerLagBlocks: health && typeof health.lagBlocks === 'number' ? health.lagBlocks : null,
     fetchedAt: Date.now(),
   };
 }

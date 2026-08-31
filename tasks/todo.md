@@ -57,6 +57,8 @@ Submission closes **5 Sep 2026, 11:59 PM MYT**. Pitch at APU on 6 Sep.
 - [x] README with description, problem, chain, contract addresses, setup, team
 - [x] `AI_TOOLS.md` maintained from the first commit
 - [ ] Fill in team names in the README
+- [ ] **Provision Postgres (Neon or Supabase) and run `npm run db:push`.** The
+      deployed feed loses everything without it, see `docs/decisions.md` §8
 - [ ] Deploy to Vercel and keep the URL working. **Do not leave this to 5 Sep**
 - [ ] Demo video, 3 to 5 minutes
 - [ ] **Record a backup video of a successful live trade.** Play it if the live

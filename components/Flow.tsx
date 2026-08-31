@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useMode } from './ModeProvider';
 import { PayoffChart } from './PayoffChart';
 import { ProofPanel } from './ProofPanel';
@@ -47,8 +48,16 @@ export function Flow() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'Could not price that view.');
-      setResult(data as InterpretResponse);
+      const interpreted = data as InterpretResponse;
+      setResult(interpreted);
       setStep(1);
+
+      if (interpreted.confidence < 0.3) {
+        toast.warning('Weak match', {
+          description: 'The agent is not confident this contract fits your view. Read why.',
+          duration: 7000,
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
@@ -78,8 +87,20 @@ export function Flow() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'The trade could not be placed.');
-      setExecution(data as ExecuteResponse);
+      const outcome = data as ExecuteResponse;
+      setExecution(outcome);
       setStep(2);
+
+      if (outcome.live) {
+        toast.success('Filled on Base', {
+          description: `${outcome.spentDisplay} spent. Transaction hash is on screen.`,
+          duration: 8000,
+        });
+      } else {
+        toast('Simulated', {
+          description: 'Real prices, no signature. Nothing moved.',
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
@@ -321,7 +342,11 @@ function PreviewStep({
         <Figure label="Maximum gain" value={quote.maxGainDisplay ?? 'Unbounded'} tone="gain" />
         <Figure
           label="Breakeven"
-          value={quote.breakeven ? quote.breakeven.toLocaleString('en-US', { maximumFractionDigits: 2 }) : 'n/a'}
+          value={
+            quote.breakeven
+              ? quote.breakeven.toLocaleString('en-US', { maximumFractionDigits: 2 })
+              : 'n/a'
+          }
         />
       </div>
 
@@ -341,8 +366,13 @@ function PreviewStep({
         <Row label="Contracts" value={quote.numContracts} />
         <Row label="Structure" value={quote.structure} />
         <Row label="Expiry" value={new Date(quote.expiry * 1000).toUTCString()} />
-        <Row label="Paid in" value={`${quote.collateralSymbol} (${quote.collateralDecimals} decimals)`} />
-        {quote.greeks && <Row label="Implied volatility" value={`${(quote.greeks.iv * 100).toFixed(1)}%`} />}
+        <Row
+          label="Paid in"
+          value={`${quote.collateralSymbol} (${quote.collateralDecimals} decimals)`}
+        />
+        {quote.greeks && (
+          <Row label="Implied volatility" value={`${(quote.greeks.iv * 100).toFixed(1)}%`} />
+        )}
       </dl>
 
       {quote.notes.length > 0 && (
@@ -363,9 +393,7 @@ function PreviewStep({
         onClick={onExecute}
         disabled={pending}
         className={`mt-7 w-full rounded-[0.875rem] py-3.5 text-[0.95rem] font-semibold transition-[filter] ${
-          live
-            ? 'bg-[var(--color-loss)] text-[#1a0a08] hover:brightness-110'
-            : 'cta'
+          live ? 'bg-[var(--color-loss)] text-[#1a0a08] hover:brightness-110' : 'cta'
         } ${pending ? 'opacity-40' : ''}`}
       >
         {pending

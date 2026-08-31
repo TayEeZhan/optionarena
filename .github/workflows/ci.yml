@@ -1,0 +1,65 @@
+name: CI
+
+# Runs on every push and every pull request. With four people merging daily,
+# this is what stops a broken main branch being discovered on demo day.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  # A new push supersedes the run in progress for the same branch.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  secrets:
+    # A committed key is treated as compromised and has to be rotated, so it is
+    # worth failing the build loudly rather than finding out later.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No committed private keys or env files
+        run: |
+          if git ls-files | grep -E '^\.env$|^\.env\.(local|production)$'; then
+            echo "::error::An .env file is committed. Remove it and rotate the key."
+            exit 1
+          fi
+          if git grep -nIE '0x[a-fA-F0-9]{64}' -- . ':!package-lock.json' ':!*.md'; then
+            echo "::error::Something that looks like a private key is committed. Rotate it."
+            exit 1
+          fi
+          echo "No secrets found."

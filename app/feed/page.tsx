@@ -62,10 +62,17 @@ export default async function FeedPage() {
                 <Stat label="Max loss" value={`${strategy.maxLoss} ${strategy.collateralSymbol}`} />
                 <Stat
                   label="Max gain"
-                  value={strategy.maxGain ? `${strategy.maxGain} ${strategy.collateralSymbol}` : 'Unbounded'}
+                  value={
+                    strategy.maxGain
+                      ? `${strategy.maxGain} ${strategy.collateralSymbol}`
+                      : 'Unbounded'
+                  }
                 />
                 <Stat label="Risk" value={strategy.risk} />
-                <Stat label="Expiry" value={new Date(strategy.expiry * 1000).toISOString().slice(0, 10)} />
+                <Stat
+                  label="Expiry"
+                  value={new Date(strategy.expiry * 1000).toISOString().slice(0, 10)}
+                />
               </div>
 
               {strategy.txHash && (

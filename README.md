@@ -123,7 +123,7 @@ Every variable is optional. The product degrades honestly without each one.
 | `ANTHROPIC_API_KEY` | A rule-based selector runs instead of the model, and labels itself as such |
 | `BASE_RPC_URL` | Falls back to `https://mainnet.base.org` |
 | `MAX_TRADE_USDC` | Ceiling defaults to 25 USDC per trade |
-| `DATABASE_URL` | Uses the local JSON store |
+| `DATABASE_URL` | Uses the local JSON store. **Required in production**, see [Deployment](#deployment) |
 
 **Security.** Use a fresh wallet created only for this project, never a personal
 one, and fund it with the minimum needed. `.env` has been in `.gitignore` since
@@ -135,10 +135,42 @@ the first commit.
 npm run dev           # development server on port 5190
 npm run book          # inspect the live book and price a contract, no key needed
 npm run verify:fill   # dry run of a real fill: every check except the signature
+npm run check         # typecheck, lint and test. Run this before pushing
 npm test              # unit tests for the decimals helpers
-npm run typecheck     # TypeScript, no emit
+npm run lint          # ESLint, including the rules that guard token math
+npm run format        # Prettier
 npm run build         # production build
 ```
+
+Database commands, only needed once `DATABASE_URL` is set:
+
+```bash
+npm run db:push       # apply the schema
+npm run db:studio     # browse the data
+```
+
+A pre-commit hook formats and lints staged files. CI runs the full gate plus a
+scan for committed keys on every push and pull request.
+
+---
+
+## Deployment
+
+**Set `DATABASE_URL` before deploying.** This is not optional. A serverless
+filesystem is read-only and per-invocation, so the local file store silently
+loses every strategy in production: the feed and leaderboard would come up empty
+on the exact URL the judges open.
+
+1. Create a free Postgres database on [Neon](https://neon.tech) or Supabase and
+   copy the connection string.
+2. `DATABASE_URL=... npm run db:push` to create the tables.
+3. Import the repo on Vercel. Add `DATABASE_URL`, `PRIVATE_KEY`,
+   `ANTHROPIC_API_KEY` and `BASE_RPC_URL` in the project's environment
+   variables, never in the repo.
+4. Deploy. `vercel.json` already sets the Singapore region and the function
+   timeouts that a mainnet fill needs.
+
+Deploy early and keep it working. Do not leave the first deployment to 5 Sep.
 
 ### Placing a real trade
 

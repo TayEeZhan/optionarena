@@ -60,8 +60,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const { instrumentId, budget, mode, view, risk, reasoning, direction, approvedMaxLoss, approvedContracts } =
-    parsed.data;
+  const {
+    instrumentId,
+    budget,
+    mode,
+    view,
+    risk,
+    reasoning,
+    direction,
+    approvedMaxLoss,
+    approvedContracts,
+  } = parsed.data;
 
   // Live mode is only possible when the server holds a key. Never pretend.
   if (mode === 'live' && !canSign()) {
@@ -140,8 +149,7 @@ export async function POST(request: Request) {
       expiry: quote.expiry,
       premium: formatUnits(quote.premium, quote.collateralDecimals),
       maxLoss: formatUnits(quote.maxLoss, quote.collateralDecimals),
-      maxGain:
-        quote.maxGain === null ? null : formatUnits(quote.maxGain, quote.collateralDecimals),
+      maxGain: quote.maxGain === null ? null : formatUnits(quote.maxGain, quote.collateralDecimals),
       breakeven: quote.breakeven,
       collateralSymbol: quote.collateralSymbol,
       collateralDecimals: quote.collateralDecimals,

@@ -24,8 +24,10 @@
   --color-loss: #ff6b5a;
   --color-gain: #5ce6a0;
 
-  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Loaded and self-hosted by next/font in app/layout.tsx. The fallbacks
+     matter: the page must stay legible if a face fails to load. */
+  --font-display: var(--font-display-loaded), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-loaded), ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 html,

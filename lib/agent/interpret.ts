@@ -41,7 +41,9 @@ function renderShortlist(instruments: Instrument[]): string {
   return instruments
     .map((i) => {
       const days = (i.hoursToExpiry / 24).toFixed(1);
-      const iv = i.greeks ? `${(i.greeks.iv * 100).toFixed(0)}% implied volatility` : 'volatility unknown';
+      const iv = i.greeks
+        ? `${(i.greeks.iv * 100).toFixed(0)}% implied volatility`
+        : 'volatility unknown';
       const delta = i.greeks ? `, delta ${i.greeks.delta.toFixed(2)}` : '';
       return (
         `- id: ${i.id}\n` +
@@ -140,20 +142,39 @@ function chooseByRules(
 ): Omit<Interpretation, 'decidedBy' | 'promptVersion'> {
   const text = request.view.toLowerCase();
 
-  const bearishWords = ['fall', 'drop', 'down', 'crash', 'bear', 'sell', 'lower', 'decline', 'dump'];
+  const bearishWords = [
+    'fall',
+    'drop',
+    'down',
+    'crash',
+    'bear',
+    'sell',
+    'lower',
+    'decline',
+    'dump',
+  ];
   const bullishWords = [
-    'rise', 'up', 'moon', 'bull', 'rally', 'higher', 'pump', 'grow', 'climb', 'break', 'breaks',
-    'above', 'surge', 'jump',
+    'rise',
+    'up',
+    'moon',
+    'bull',
+    'rally',
+    'higher',
+    'pump',
+    'grow',
+    'climb',
+    'break',
+    'breaks',
+    'above',
+    'surge',
+    'jump',
   ];
 
   const bearish = bearishWords.some((w) => text.includes(w));
   const bullish = bullishWords.some((w) => text.includes(w));
 
-  const direction: 'bullish' | 'bearish' | 'neutral' = bearish && !bullish
-    ? 'bearish'
-    : bullish && !bearish
-      ? 'bullish'
-      : 'neutral';
+  const direction: 'bullish' | 'bearish' | 'neutral' =
+    bearish && !bullish ? 'bearish' : bullish && !bearish ? 'bullish' : 'neutral';
 
   // If the view names an asset, honour it. Choosing an ETH contract for a view
   // about BTC is wrong however good the strike is.
