@@ -24,3 +24,6 @@ coverage/
 .vercel
 next-env.d.ts
 tsconfig.tsbuildinfo
+
+# Local runtime data (the file-backed strategy store)
+.data/
