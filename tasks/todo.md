@@ -42,13 +42,13 @@ Submission closes **5 Sep 2026, 11:59 PM MYT**. Pitch at APU on 6 Sep.
 
 ## P3 — the differentiator
 
-- [ ] Deribit adapter: public API, trade history, identify the right endpoints
-- [ ] Decide what "winning trade" means concretely: resolved P&L or inferred
-- [ ] `rank.ts`: risk-adjusted scoring, never raw percentage gain
-- [ ] `map.ts`: external instrument to nearest Thetanuts instrument
-- [ ] **Validate the mapping before building the copy interface.** Thetanuts has
-      ETH and BTC puts on a handful of expiries. If Deribit's liquid contracts do
-      not map onto that, the copy feature needs rethinking
+- [x] Deribit adapter: public API, no key needed, `lib/signals/sources/deribit.ts`
+- [x] Decide what "winning trade" means: the user picks from four criteria
+- [x] `rank.ts`: four criteria, notional floor, a stated reason per signal
+- [x] `map.ts`: nearest Thetanuts instrument with every difference disclosed
+- [x] **Validate the mapping.** 39/39 exact from the Thetanuts side. See §11
+- [ ] Persist sourced signals to the `signals` table instead of fetching each time
+- [ ] Build the signals UI: criterion chooser, ranked list, differences panel
 - [ ] Feed and leaderboard populated with sourced data
 - [ ] Copy flow: select a sourced strategy, agent maps and executes it
 
@@ -72,9 +72,9 @@ Submission closes **5 Sep 2026, 11:59 PM MYT**. Pitch at APU on 6 Sep.
 
 | # | Question | Status |
 |---|---|---|
-| 1 | Does Devfolio handle both tracks as one submission? | Open |
-| 2 | Which venues can we pull trade data from, and what is a "winning" trade? | Open |
-| 3 | Do Deribit's liquid contracts map onto Thetanuts' Base book? | Open, blocks P3 |
+| 1 | Does Devfolio handle both tracks as one submission? | **Resolved** — one submission, both tracks |
+| 2 | Which venues, and what is a "winning" trade? | **Resolved** — Deribit public API; the user picks from four criteria. §12 |
+| 3 | Do Deribit's contracts map onto Thetanuts' book? | **Resolved** — yes, 39/39 exact one way. §11 |
 | 4 | MCP or AgentKit? | **Resolved** — neither. See `docs/decisions.md` §2 |
 | 5 | Which assets have real quotes? | **Resolved** — ETH and BTC. §4 |
 | 6 | Wallet layer? | **Resolved** — server-side signing. §1 |

@@ -23,7 +23,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "check": "npm run typecheck && npm run lint && npm test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "signals": "tsx --conditions=react-server scripts/signals.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

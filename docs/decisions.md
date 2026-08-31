@@ -222,3 +222,61 @@ already holds it.
 The single most important line here: **`DATABASE_URL` must be set in production.**
 Vercel's filesystem is read-only and per-invocation, so the file store loses
 everything on the deployed URL. Locally it needs no configuration at all.
+
+---
+
+## 11. Does Deribit map onto Thetanuts? Yes, with an asymmetry
+
+Open question 3 in the brief, and the one flagged as needing an answer by day
+two. Measured 31 Aug 2026 against both live venues. Reproduce with
+`npm run signals`.
+
+**Thetanuts to Deribit: 39 of 39 exact.** Every buyable Thetanuts put, ETH and
+BTC, has an exact strike-and-expiry match on Deribit. That is not luck. The
+market makers quoting Base hedge on Deribit, so they quote the same grid.
+
+**Deribit to Thetanuts: usually approximate.** Deribit lists 416 live ETH puts
+across 12 expiries; Thetanuts has 39 across a handful. So a sourced trade often
+lands on a strike or expiry Thetanuts does not quote, and the mapper reports the
+difference rather than substituting silently.
+
+That asymmetry is the honest shape of the feature, and it is fine: the copy flow
+exists to bring Thetanuts flow it does not have, not to replicate Deribit. What
+matters is that the user is told exactly how the contract they are about to buy
+differs from the one they are copying. `lib/signals/map.ts` never returns a
+match without listing every difference.
+
+**The limit worth knowing:** Deribit's public trades carry no trader identity.
+"Follow this profitable trader" is not derivable from public data at all, so
+OptionArena ranks trades, never traders, and never claims a track record it
+cannot see.
+
+---
+
+## 12. What counts as a winning trade: the user decides
+
+Open question 2. There is no single honest definition, so rather than bury a
+judgement call inside a score, the user picks one of four, each computable from
+public data and each explained in the interface:
+
+| Criterion | What it means |
+|---|---|
+| In profit now | Price paid against the current mark. Ranks by how far it moved in the buyer's favour |
+| Big money | Notional size. Size is not skill, but it is conviction |
+| Cheap volatility | Implied volatility paid against the median of live flow |
+| Crowd favourite | Total volume on a contract, aggregated across trades |
+
+A minimum notional of $250 applies to the percentage-based criteria. Without it
+the board fills with rounding artefacts: a contract that traded at 0.0001 and is
+marked at 0.0001 reads as "up 27%" purely from the tick size. Nobody expressed a
+view with twelve dollars.
+
+Every ranked signal carries a plain-language reason it ranked, so the ranking is
+never a black box.
+
+---
+
+## 13. Devfolio takes both tracks in one submission
+
+Open question 1, confirmed by the team on 31 Aug 2026. One codebase, one
+submission, both tracks. Nothing in the build needs to change.
