@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "A social options desk on Thetanuts Finance V4. Describe your view, understand the risk, prove the trade.",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev -p 5190",
     "build": "next build",
@@ -12,8 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify:fill": "tsx scripts/verify-fill.ts",
-    "book": "tsx scripts/show-book.ts"
+    "verify:fill": "tsx --conditions=react-server scripts/verify-fill.ts",
+    "book": "tsx --conditions=react-server scripts/show-book.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
@@ -22,6 +24,7 @@
     "next": "^16.3.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "server-only": "^0.0.1",
     "zod": "^4.5.4"
   },
   "devDependencies": {
