@@ -252,7 +252,7 @@ WETH`. See `docs/decisions.md`.
 | Name | Lane |
 |---|---|
 | Tay Ee Zhan | SDK and execution |
-| _add your name_ | Agent and prompts |
+| Goh Sheng Kuan | Agent and prompts |
 | _add your name_ | Signals and ranking |
 | _add your name_ | Interface and flow |
 
