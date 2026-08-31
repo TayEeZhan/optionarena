@@ -8,6 +8,9 @@ import { toWire, type InterpretResponse } from '@/lib/wire';
 
 export const dynamic = 'force-dynamic';
 
+/** Reads the book and asks the model, so it needs longer than the default. */
+export const maxDuration = 30;
+
 /**
  * Step 01 to step 02: a plain-language view becomes a priced strategy.
  *

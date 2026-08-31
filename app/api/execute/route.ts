@@ -14,6 +14,14 @@ import type { ExecuteResponse } from '@/lib/wire';
 export const dynamic = 'force-dynamic';
 
 /**
+ * A mainnet fill can take an approval transaction, the fill itself and a
+ * confirmation, so the default timeout is not enough. Set here rather than in
+ * vercel.json: the App Router reads this export, and a vercel.json glob that
+ * matches no function fails the deployment.
+ */
+export const maxDuration = 60;
+
+/**
  * How much worse a fill may get between step 02 and step 03 before it is
  * refused. Two percent is tight enough to protect the user and loose enough to
  * survive a normal market-maker requote.
