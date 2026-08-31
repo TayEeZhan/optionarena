@@ -1,0 +1,26 @@
+# Secrets - NEVER commit. Present from the first commit, before any key exists.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Misc
+.DS_Store
+*.log
+npm-debug.log*
+coverage/
+.vercel
+next-env.d.ts
+tsconfig.tsbuildinfo
