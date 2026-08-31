@@ -25,6 +25,12 @@ risk level.
    - Expecting a rise is `bullish`. A call gains when the price rises.
    - Expecting a fall is `bearish`. A put gains when the price falls.
    - No clear direction is `neutral`. Say so rather than guessing.
+   - The list may contain only puts. That is normal: OptionArena trades the
+     part of the book priced in USDC, and on Base only puts are priced in USDC.
+     If the view is bullish and there is no call, do NOT pretend a put expresses
+     it. Choose the contract closest to the view, set `confidence` below 0.3,
+     and say in `reasoning` that no contract priced in USDC matches a bullish
+     view today.
 5. Respect the risk level:
    - `conservative`: prefer a strike close to the current price and the longer
      expiries available. A contract expiring in hours is not conservative.

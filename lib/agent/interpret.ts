@@ -141,7 +141,10 @@ function chooseByRules(
   const text = request.view.toLowerCase();
 
   const bearishWords = ['fall', 'drop', 'down', 'crash', 'bear', 'sell', 'lower', 'decline', 'dump'];
-  const bullishWords = ['rise', 'up', 'moon', 'bull', 'rally', 'higher', 'pump', 'grow', 'climb'];
+  const bullishWords = [
+    'rise', 'up', 'moon', 'bull', 'rally', 'higher', 'pump', 'grow', 'climb', 'break', 'breaks',
+    'above', 'surge', 'jump',
+  ];
 
   const bearish = bearishWords.some((w) => text.includes(w));
   const bullish = bullishWords.some((w) => text.includes(w));
@@ -152,9 +155,20 @@ function chooseByRules(
       ? 'bullish'
       : 'neutral';
 
+  // If the view names an asset, honour it. Choosing an ETH contract for a view
+  // about BTC is wrong however good the strike is.
+  const named = request.underlying
+    ? request.underlying.toUpperCase()
+    : [...new Set(instruments.map((i) => i.underlying))].find((symbol) =>
+        text.includes(symbol.toLowerCase()),
+      );
+
+  const onAsset = named ? instruments.filter((i) => i.underlying === named) : instruments;
+  const universe = onAsset.length > 0 ? onAsset : instruments;
+
   const wantCall = direction === 'bullish';
-  const matching = instruments.filter((i) => i.isCall === wantCall);
-  const pool = matching.length > 0 ? matching : instruments;
+  const matching = universe.filter((i) => i.isCall === wantCall);
+  const pool = matching.length > 0 ? matching : universe;
 
   // Conservative prefers the longest expiry available, aggressive the shortest.
   const byExpiry = [...pool].sort((a, b) =>
@@ -176,14 +190,24 @@ function chooseByRules(
 
   const instrument = sameExpiry[wantCall ? sameExpiry.length - 1 - index : index] ?? pool[0];
 
+  // A bullish view has no honest answer when only puts are priced in USDC.
+  // Say that rather than dressing a put up as a bullish trade.
+  const mismatch = wantCall && !instrument.isCall;
+
+  const reasoning = mismatch
+    ? `Chosen by rule, not by a model, because no language model is configured. ` +
+      `The view reads as bullish, but no contract priced in USDC expresses that today: ` +
+      `on Base only puts are collateralised in USDC. This is the closest available ` +
+      `contract, and it does not match the view. Treat it with care.`
+    : `Chosen by rule, not by a model, because no language model is configured. ` +
+      `The view reads as ${direction}, so this is ${instrument.isCall ? 'a call' : 'a put'} ` +
+      `at strike ${instrument.strikes.join(' / ')} on the ${request.risk} setting.`;
+
   return {
     instrument,
-    reasoning:
-      `Chosen by rule, not by a model, because no language model is configured. ` +
-      `The view reads as ${direction}, so this is ${instrument.isCall ? 'a call' : 'a put'} ` +
-      `at strike ${instrument.strikes.join(' / ')} on the ${request.risk} setting.`,
+    reasoning,
     direction,
-    confidence: direction === 'neutral' ? 0.25 : 0.5,
+    confidence: mismatch ? 0.15 : direction === 'neutral' ? 0.25 : 0.5,
   };
 }
 

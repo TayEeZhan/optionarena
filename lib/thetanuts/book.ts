@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { createHash } from 'node:crypto';
+
 import {
   buildPriceFeedSymbolMap,
   getOptionImplementationInfo,
@@ -15,6 +17,40 @@ import { fromChain, fromUnits } from './decimals';
  */
 
 const feedSymbols = buildPriceFeedSymbolMap(CHAIN_ID);
+
+/**
+ * A stable identity for one resting order.
+ *
+ * The order's `nonce` looks like an id but is not one. Measured on the live
+ * book on 31 Aug 2026, 72 maker-sell orders shared only 13 distinct nonces,
+ * and a single nonce covered 18 contracts across different strikes AND
+ * expiries. Matching on it would let step 03 fill a different contract from
+ * the one the user approved at step 02, with real money.
+ *
+ * So identity is derived from the fields that define the CONTRACT: who is
+ * offering it, what it settles against, its strikes, its expiry and its type.
+ *
+ * Price and nonce are deliberately excluded. Market makers requote roughly
+ * every minute, which changes both. Including them made an id expire within
+ * seconds, so a user who read step 02 carefully was told the order had gone.
+ * Price movement is handled where it belongs, as a slippage check at step 03,
+ * rather than by pretending a requoted contract is a different contract.
+ */
+function instrumentId(order: OrderWithSignature): string {
+  const raw = (order.rawApiData ?? {}) as Record<string, unknown>;
+  const parts = [
+    order.order.maker,
+    raw.implementation,
+    order.order.collateralToken,
+    raw.priceFeed,
+    (order.order.strikes ?? []).join('|'),
+    order.order.expiry,
+    order.order.optionType,
+    raw.isCall,
+  ].join(':');
+
+  return createHash('sha256').update(parts).digest('hex').slice(0, 24);
+}
 
 /** Collateral token lookup by address, so decimals are read, never assumed. */
 const tokensByAddress: Record<string, CollateralToken> = Object.fromEntries(
@@ -93,7 +129,7 @@ function toInstrument(order: OrderWithSignature): Instrument | null {
   const expiry = Number(order.order.expiry);
 
   return {
-    id: String(order.order.nonce),
+    id: instrumentId(order),
     underlying,
     structure,
     shape: (info?.type ?? 'VANILLA').toLowerCase(),
@@ -122,25 +158,66 @@ export async function fetchBook(): Promise<Instrument[]> {
 }
 
 /**
+ * True when an order is paid for in USDC.
+ *
+ * Measured on the live book on 31 Aug 2026: all 36 buyable puts are
+ * collateralised in aBasUSDC, while every buyable call is collateralised in the
+ * asset it delivers (aBasWETH for ETH, cbBTC for BTC). That is normal for
+ * physically settled options, and it decides what a budget can mean.
+ */
+export function isUsdcCollateral(instrument: Instrument): boolean {
+  return instrument.collateral.symbol.includes('USDC');
+}
+
+/**
  * Orders the user can BUY.
  *
  * A buyer's maximum loss is the premium paid, which is the defined-risk promise
  * OptionArena makes. Buying needs a maker who is selling. Confirmed against the
  * live book on 31 Aug 2026: only ETH and BTC have any resting maker sells.
+ *
+ * `usdcOnly` defaults to true, and that default is a safety decision, not a
+ * preference. OptionArena asks for a budget in USDC, so it must only offer
+ * contracts where that budget is literally true. A call is paid for in cbBTC or
+ * aBasWETH, so a budget of 5 against a BTC call would mean 5 cbBTC, which is
+ * roughly four hundred thousand dollars rather than five. Until the budget is
+ * converted through a spot price, the USDC side of the book is the only side
+ * where the number the user types is the number they spend.
  */
-export async function fetchBuyable(underlying?: string): Promise<Instrument[]> {
+export async function fetchBuyable(
+  underlying?: string,
+  options: { usdcOnly?: boolean } = {},
+): Promise<Instrument[]> {
+  const { usdcOnly = true } = options;
   const book = await fetchBook();
-  return book
+
+  const candidates = book
     .filter((i) => !i.makerIsBuying)
     .filter((i) => i.availableCollateral > 0n)
-    .filter((i) => (underlying ? i.underlying === underlying : true))
-    .sort((a, b) => a.expiry - b.expiry || a.strikes[0] - b.strikes[0]);
+    .filter((i) => (usdcOnly ? isUsdcCollateral(i) : true))
+    .filter((i) => (underlying ? i.underlying === underlying : true));
+
+  // A maker can rest more than one order on the same contract. Identity names
+  // the contract, so keep the cheapest, which is the best price for a buyer.
+  const best = new Map<string, Instrument>();
+  for (const instrument of candidates) {
+    const existing = best.get(instrument.id);
+    if (!existing || instrument.pricePerContract < existing.pricePerContract) {
+      best.set(instrument.id, instrument);
+    }
+  }
+
+  return [...best.values()].sort(
+    (a, b) => a.expiry - b.expiry || a.strikes[0] - b.strikes[0],
+  );
 }
 
 /** A compact summary of what the book currently offers. */
 export interface MarketPulse {
   totalOrders: number;
   buyableOrders: number;
+  /** Of the buyable orders, how many are paid for in USDC. */
+  usdcBuyable: number;
   byUnderlying: { underlying: string; buyable: number; total: number }[];
   nextExpiry: number | null;
   indexerLagBlocks: number | null;
@@ -161,6 +238,7 @@ export async function fetchPulse(): Promise<MarketPulse> {
   return {
     totalOrders: book.length,
     buyableOrders: buyable.length,
+    usdcBuyable: buyable.filter(isUsdcCollateral).length,
     byUnderlying: underlyings
       .map((u) => ({
         underlying: u,

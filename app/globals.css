@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+
+/*
+ * OptionArena visual direction, from the build brief section 10.
+ *
+ * Near-black background with a slight green cast, marginally lighter card
+ * surfaces, hairline borders, one bright lime accent used for the primary
+ * action and for emphasis. Muted grey-green for secondary text.
+ */
+
+@theme {
+  --color-ground: #080b09;
+  --color-surface: #0e1310;
+  --color-surface-high: #141a16;
+  --color-hairline: #1e2621;
+  --color-hairline-bright: #2b352e;
+
+  --color-ink: #e8efe9;
+  --color-ink-muted: #8a9a8e;
+  --color-ink-faint: #5d6b61;
+
+  --color-lime: #c7f751;
+  --color-lime-dim: #9dc43f;
+  --color-loss: #ff6b5a;
+  --color-gain: #5ce6a0;
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+html,
+body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Eyebrow labels, dates and data are monospace, per the type direction. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+.data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: 1.25rem;
+}
+
+/* Headings set large with tight tracking. */
+.display {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+/* The one full-width primary action per step. */
+.cta {
+  background: var(--color-lime);
+  color: #0a0f0b;
+  border-radius: 0.875rem;
+  font-weight: 600;
+  transition: filter 120ms ease;
+}
+.cta:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.cta:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+::selection {
+  background: var(--color-lime);
+  color: #0a0f0b;
+}
+
+/* Scrollbars that do not fight the palette. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-hairline-bright) transparent;
+}
