@@ -1,154 +1,132 @@
 # Proposal: the arena layer, as P3a
 
-**Status: proposal, not a decision.** Written 31 Aug 2026 on the `arena-layer`
-branch. Nothing here is settled, and nothing in `docs/decisions.md` or
-`tasks/todo.md` has been changed. The team decides.
+**Status: proposal, and largely withdrawn.** Written 31 Aug 2026 on the
+`arena-layer` branch, revised 1 Sep after reading `docs/decisions.md` §11–§13 and
+`lib/signals/`. Nothing in `docs/decisions.md` or `tasks/todo.md` has been
+changed by this file. The team decides.
 
 ---
 
-## What this argues
+## Read this first: the original argument is dead
 
-That a competitive layer over the strategies we already store should run
-**alongside** P3 Deribit signal sourcing, not instead of it, and that it is the
-safer of the two to start first.
+The first version of this document argued for a competitive layer on the grounds
+that **P3 was unstarted and blocked** on an open question — whether Deribit's
+liquid contracts map onto Thetanuts' thin ETH/BTC put book.
 
-The case rests on one observation: **the product is called OptionArena and it
-has no arena.** A judge who reads the name and then uses the product will
-notice.
+That question was answered the same evening, and the answer is emphatic.
+`docs/decisions.md` §11:
+
+> **Thetanuts to Deribit: 39 of 39 exact.** Every buyable Thetanuts put, ETH and
+> BTC, has an exact strike-and-expiry match on Deribit. That is not luck. The
+> market makers quoting Base hedge on Deribit, so they quote the same grid.
+
+Open question 2 is resolved too (§12: the user picks one of four criteria), and
+so is open question 1 (§13: one submission, both tracks). `lib/signals/` exists
+with a Deribit source, a ranker and a mapper.
+
+**P3 is no longer blocked, no longer unstarted, and no longer speculative.** The
+premise this proposal rested on is gone, and the recommendation below changes
+accordingly.
 
 ---
 
-## What already exists
+## What has already been decided, and should not be relitigated
 
-This is the part that makes the proposal cheap. None of it is new work.
+Recorded here so this document does not accidentally re-argue settled points.
 
-| Already in the repo | Where |
+| Decided | Where |
 |---|---|
-| Executed strategies with a `trader` column | `lib/db/schema.ts` |
-| `LeaderboardRow`: trades, totalReturn, totalRisked, riskAdjusted, hitRate | `lib/db/store.ts` |
-| `MIN_TRADES_TO_RANK = 3` | `lib/db/store.ts` |
-| A `/leaderboard` route with an honest empty state | `app/leaderboard/page.tsx` |
-| A feed rendering executed and simulated strategies | `app/feed/page.tsx` |
-| Every strategy's `maxLoss`, `premium`, `expiry`, `txHash` | `lib/db/schema.ts` |
+| Deribit maps onto Thetanuts, exactly one way and approximately the other | §11 |
+| The mapper never substitutes silently — it lists every difference | §11 |
+| **OptionArena ranks trades, never traders** | §11 |
+| "Winning trade" is the user's choice of four criteria, with a $250 notional floor | §12 |
+| Every ranked signal carries a plain-language reason it ranked | §12 |
+| One submission covers both tracks | §13 |
 
-What is missing is the ranking function itself. The interface, the schema, the
-constant and the honest empty state were all written for it and are waiting.
-
----
-
-## The two lanes, stated fairly
-
-### P3 — Deribit signal sourcing
-
-**For it.** It came from the Thetanuts team directly, and it answers the real
-objection to copy-trading: under $1M TVL there is nobody on-platform worth
-copying, but Deribit and Derive have depth. It is the only one of the two that
-**brings Thetanuts order flow it does not currently have**, which is a genuine
-argument to a protocol sponsor rather than a feature we happen to like.
-
-**Against it.** It is **not started**, and it is blocked on a question we have
-not answered: *do Deribit's liquid contracts map onto Thetanuts' Base book?* We
-have ETH and BTC puts on a handful of expiries. If the mapping does not hold,
-the copy interface needs rethinking, and we would discover that with days left.
-
-It also depends on work that is not scoped: a venue adapter, a definition of
-"winning trade" that survives scrutiny, resolved profit and loss data we do not
-control, and a mapping layer that must never substitute an instrument silently.
-
-### P3a — the arena layer
-
-**For it.** Unblocked. Every dependency is already in the repo. It reuses the
-schema, the route and the constant listed above, so most of the work is one
-ranking function and a detail view. It delivers the name. And it gives a judge
-something to look at beyond a single strategy: a board, a record, a reason the
-product is called what it is called.
-
-**Against it, honestly:** it brings the protocol **no new order flow**. It makes
-our own users legible to each other, which is a product benefit, not a protocol
-benefit. Against a sponsor who told us what they want, that is a real cost and
-should not be dressed up.
+The third row deserves particular note, because the first version of this
+document derived the same conclusion independently and at greater length. §11
+states it better and from firmer evidence — Deribit's public trades carry no
+trader identity, so a track record is not derivable from public data at all. The
+earlier reasoning here about `trader` being a session identifier reached the same
+place from the custody decision in §1. **Cite §11; it is the stronger source.**
 
 ---
 
-## The limitation that has to be stated first
+## What is still true
 
-**With one shared server wallet and no auth, `trader` is a demo session
-identifier, not a verified person.**
+Two things from the original proposal survive the change.
 
-That is not a flaw in this proposal. It is a consequence of the custody decision
-in `docs/decisions.md` §1, which is correct for a five-day build. But it means a
-leaderboard cannot honestly claim to rank *people*.
+**The product is called OptionArena and the board is still empty.**
+`lib/db/store.ts` declares `LeaderboardRow` and `MIN_TRADES_TO_RANK = 3`. The
+ranking function does not exist, and `app/leaderboard/page.tsx` renders an honest
+empty state. That is a real gap between the name and the product.
 
-What it can honestly rank:
-
-- **strategies**, by return per unit of capital risked
-- **sessions**, labelled as sessions
-
-What it must not do is imply the top row is a person with a track record. If we
-cannot say that truthfully, the interface says what it actually is. That is the
-same standard the empty state already holds itself to:
-
-> *"Until then the board stays empty rather than showing a number that has not
-> been earned."*
-
-An honest board of ranked strategies is still worth building. A board that
-implies verified traders is not.
+**The scaffold is still waiting.** Schema, route, constant and empty state were
+all written for a board that has not been built.
 
 ---
 
-## What P3a would be, concretely
+## What has changed: P3 may already be the arena
 
-The smallest version that earns the name. Roughly a day, most of it in one file.
+This is the substance of the revision.
 
-**1. The ranking function.** `rankStrategies()` in `lib/db/store.ts`,
-implementing the `LeaderboardRow` shape that is already declared.
+`lib/signals/rank.ts` ranks trades by four user-selectable criteria and attaches
+a plain-language reason to each. That is not merely signal plumbing — **it is
+leaderboard content.** A board fed by ranked Deribit signals is an arena, and it
+arrives as a by-product of work that is already underway and already justified to
+the sponsor.
 
-Ranked by **return per unit of capital risked**, never raw percentage gain, for
-the reason already written into that file: a board sorted by percentage gain
-rewards whoever took the most risk and got lucky. `MIN_TRADES_TO_RANK` stays at
-3 and stays visible, so one lucky trade cannot top the board.
+So the question is no longer "P3 or P3a". It is narrower:
 
-It scores settled strategies only. A strategy that has not reached expiry has
-not earned a number.
+> Once P3's ranking is on screen, is there anything left that a separate layer
+> over our own executed strategies would add?
 
-**2. The board.** Fill in `app/leaderboard/page.tsx`. Show trades, hit rate and
-capital risked next to the headline figure, so a high number from a tiny sample
-is visibly different from a steady one. Link every row to its transaction hash.
+The honest answer is: not much, and not soon. Ranking our own executed strategies
+would need settled positions we do not yet have — the board can only rank what
+has reached expiry, and **P0 has not placed a single mainnet fill.** A board over
+our own trades has nothing to rank until that changes.
 
-**3. A strategy detail view.** The view in the user's own words, the agent's
-reasoning, the payoff, the outcome, and the hash. This is the page that makes
-the product feel like an arena rather than a form.
+---
 
-### Deliberately excluded
+## Revised recommendation
 
-- **Anything staked.** A competitive layer with money on the outcome is
-  gambling layered on gambling, and a protocol judge will say so.
+**Do not run P3a as a separate lane.** Instead:
+
+1. **Wire the existing `/leaderboard` route to `lib/signals/rank.ts`.** The
+   scaffold was built for a board; the ranker produces one. Connecting them is
+   the cheapest path from "OptionArena has no arena" to "OptionArena has an
+   arena", and it needs no new concepts.
+2. **Keep the empty state honest** where our own executed strategies are
+   concerned. A board of sourced signals is not a track record of ours, and the
+   interface must not let the two be confused. §11's rule applies: rank trades,
+   never traders.
+3. **Leave ranking our own strategies until after P0.** It cannot rank anything
+   until a real fill has settled.
+
+### Still deliberately excluded
+
+- **Anything staked.** A competitive layer with money on the outcome is gambling
+  layered on gambling, and a protocol judge will say so.
 - **Head-to-head challenges.** They need a duration, a valuation of open
-  positions we do not have, and a social graph. Out of scope this week.
-- **Any claim about future performance.** The board reports what happened.
+  positions we do not have, and a social graph.
+- **Any claim about future performance.** A board reports what happened.
 
 ---
 
-## The honest recommendation
+## The thing that outranks all of this
 
-Both lanes are worth having and they do not conflict: P3a ranks what we
-executed, P3 sources what to execute next. They meet at the same feed.
+`tasks/todo.md` P0 is still open: **no real mainnet fill has been placed, and no
+hash is recorded in `docs/decisions.md` §9.** Until that exists the Track 02
+entry is not valid, and no amount of leaderboard makes up for it.
 
-The sequencing argument is about risk, not preference. **P3a is unblocked and P3
-is not.** If the Deribit mapping question is answered early and the answer is
-yes, P3 is the stronger submission, because it brings the protocol something it
-asked for. If that question is still open in two days, P3a is what stands
-between us and a product whose name it does not live up to.
-
-There is also a third option worth naming: **do neither, and spend the time on
-the mainnet hash, the database and the deploy.** Those three are on the critical
-path and none of them are done. A ranked board on a deployment that loses its
-data is worth nothing.
+If this proposal competes with that for anyone's time, it should lose.
 
 ---
 
 ## Related
 
-- `docs/decisions.md` §1 — server-side signing, and why `trader` is what it is
-- `docs/decisions.md` §8 — persistence, and why `DATABASE_URL` is not optional
-- `tasks/todo.md` P3 — the Deribit lane and its open questions
+- `docs/decisions.md` §11 — Deribit mapping, and why we rank trades not traders
+- `docs/decisions.md` §12 — what counts as a winning trade
+- `docs/decisions.md` §1 — server-side signing, and why `trader` is a session id
+- `docs/decisions.md` §9 — the missing mainnet hash
+- `tasks/todo.md` P3 — the signals lane

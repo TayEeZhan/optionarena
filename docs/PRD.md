@@ -152,8 +152,8 @@ that this is real and not a mockup. That is what the transaction hash is for.
 One entry may take both. Sponsor's words: *"Nothing stops one entry taking both
 tracks. If we're happy with it, you can win both."*
 
-**Open question, still unresolved:** whether Devfolio accepts both tracks as one
-submission or two. Tracked in `tasks/todo.md`.
+**Resolved 31 Aug 2026:** Devfolio takes both tracks in **one submission**. One
+codebase, one entry, both tracks. See `docs/decisions.md` §13.
 
 ### The hard rule
 
@@ -491,13 +491,23 @@ The product is named OptionArena and has no arena. A competitive layer over the
 `strategies` table would deliver the name, is unblocked, and reuses the
 leaderboard scaffold that already exists.
 
-It is written up as a **proposal**, not a decision, in
-`docs/proposals/arena-layer.md`, weighed honestly against the P3 Deribit signal
-lane. **The team decides.**
+It was written up as a proposal in `docs/proposals/arena-layer.md` and has since
+been **largely withdrawn**. The argument rested on P3 being blocked; `decisions.md`
+§11 answered that question the same evening — Deribit maps onto Thetanuts 39 of
+39 exact — and `lib/signals/` now exists.
 
-The risk-gate idea from the first PRD survives here and only here: sourced
-signals from strangers on another venue would need exactly that kind of guard.
-It has no role while there is nothing to follow.
+**The board is more likely to arrive through P3 than beside it.**
+`lib/signals/rank.ts` already ranks trades by four user-selectable criteria with
+a plain-language reason each. Wiring the existing `/leaderboard` route to that
+output is the cheapest route from "OptionArena has no arena" to one that works.
+
+Two rules govern whatever fills the board, both from `decisions.md` §11 and §12:
+**rank trades, never traders** — Deribit's public trades carry no trader
+identity, so a track record is not derivable from public data — and every ranked
+row carries the reason it ranked, so the board is never a black box.
+
+The risk-gate idea from the first PRD does not survive. It presumed following a
+person; there are no persons to follow.
 
 ---
 ---
