@@ -1,0 +1,38 @@
+{
+  "name": "optionarena",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A social options desk on Thetanuts Finance V4. Describe your view, understand the risk, prove the trade.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "next dev -p 5190",
+    "build": "next build",
+    "start": "next start -p 5190",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify:fill": "tsx scripts/verify-fill.ts",
+    "book": "tsx scripts/show-book.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
+    "@thetanuts-finance/thetanuts-client": "^0.3.0",
+    "ethers": "^6.17.0",
+    "next": "^16.3.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "dotenv": "^17.3.1",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.13",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.11"
+  }
+}
