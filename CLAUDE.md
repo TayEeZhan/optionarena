@@ -7,6 +7,12 @@ The full build brief this project follows is `optionsarena.md` (kept outside the
 repo). Architectural decisions and their reasoning live in `docs/decisions.md`.
 Read `tasks/lessons.md` at the start of every session.
 
+`docs/PRD.md` is what the product is *for*: every feature's pipeline (§3), the
+rules a new pipeline follows (§3.9), the interface direction (§4.3) and the
+non-negotiables (§4.7). Read §3 before building a pipeline and §4.3 before
+touching the interface. Where it and `docs/decisions.md` disagree, decisions
+wins; where it and `tasks/todo.md` disagree about what to do next, todo wins.
+
 ## Stack
 
 - Next.js 16 App Router, TypeScript, Tailwind v4
