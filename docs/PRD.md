@@ -412,7 +412,9 @@ is a demo session identifier, not a verified distinct person. Any ranking built
 on it ranks **sessions and strategies, not proven individuals.** Say so wherever
 it is displayed.
 
-## 3.3 The four-step flow
+## 3.3 The four-step flow — the write path
+
+The one pipeline that moves money. Every other feature reads.
 
 `Describe → Preview risk → Prove on-chain → Share`
 
@@ -508,6 +510,64 @@ row carries the reason it ranked, so the board is never a black box.
 
 The risk-gate idea from the first PRD does not survive. It presumed following a
 person; there are no persons to follow.
+
+## 3.8 The signals lane — pipeline
+
+Owned by the signals lane, not by this document. Recorded here so every feature's
+pipeline sits in one place. The reasoning behind it is `docs/decisions.md` §11
+and §12; if this description and those disagree, they win.
+
+```
+1. SOURCE            fetchRecentTrades(currency, 500)
+                     Deribit public API. Live, unexpired trades only
+                          ↓
+2. RANK              rank(trades, criterion)
+                     one of four user-chosen criteria:
+                       in profit now · big money
+                       cheap volatility · crowd favourite
+                     $250 notional floor on the percentage criteria,
+                     so tick-size artefacts cannot top the board
+                     every result carries `why` — the reason it ranked
+                          ↓
+3. MAP               mapSignals(ranked)
+                     find the nearest Thetanuts instrument
+                     exact match  -> copyable
+                     no match     -> `unavailable`, said plainly
+                     near match   -> `differences[]`, never substituted
+                          ↓
+4. PRESENT           the user sees the trade, why it ranked, and exactly
+                     how the contract they can buy differs from it
+```
+
+Run it with `npm run signals`.
+
+**The asymmetry is the point.** Thetanuts to Deribit is 39 of 39 exact; Deribit
+to Thetanuts is usually approximate, because Deribit lists far more strikes. The
+mapper reports the difference rather than hiding it.
+
+**Ranks trades, never traders.** Deribit's public trades carry no trader
+identity, so a track record is not derivable from public data at all.
+
+## 3.9 Read paths
+
+The three screens that only read. No writes, no signing.
+
+```
+FEED         getStore().list()
+             -> executed and simulated strategies, newest first
+             -> executed rows link to Basescan via explorerTx()
+             simulated rows are shown and labelled, not hidden
+
+LEADERBOARD  getStore().list(500) -> filter to settled
+             -> ranking function NOT YET IMPLEMENTED
+             -> renders the honest empty state instead
+
+PROFILE      getStore().list(200) + signerAddress() + storeKind()
+             -> counts, the shared wallet, and which store is in use
+```
+
+`storeKind()` is surfaced deliberately: a deployment running on the file store
+would silently lose everything, so which store is in use is never a mystery.
 
 ---
 ---
