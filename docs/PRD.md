@@ -485,11 +485,11 @@ Ranking is by **return per unit of capital risked, never raw percentage gain.** 
 board sorted by percentage gain rewards whoever took the most risk and got
 lucky, which is the opposite of what this product is for.
 
-## 3.7 The arena layer — proposed, not decided
+## 3.7 The arena layer — proposal withdrawn
 
-The product is named OptionArena and has no arena. A competitive layer over the
-`strategies` table would deliver the name, is unblocked, and reuses the
-leaderboard scaffold that already exists.
+The product is named OptionArena and the board is still empty. A competitive
+layer over the `strategies` table was proposed to close that gap, on the grounds
+that the signals lane was blocked. It no longer is.
 
 It was written up as a proposal in `docs/proposals/arena-layer.md` and has since
 been **largely withdrawn**. The argument rested on P3 being blocked; `decisions.md`
