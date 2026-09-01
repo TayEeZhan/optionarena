@@ -1,127 +1,120 @@
-import { Flow } from '@/components/Flow';
+import Link from 'next/link';
 import { AutoRefresh } from '@/components/AutoRefresh';
+import { ArrowUpRightIcon, ChevronRightIcon, CopyIcon, TradeIcon } from '@/components/Icons';
+import { AssetMark, instrumentLabel, signalValue } from '@/components/SignalCard';
+import { getBoardSnapshot } from '@/lib/signals/board';
 import { fetchPulse } from '@/lib/thetanuts/book';
-import { chainConfig } from '@/lib/thetanuts/client';
 
-// The book changes constantly, so this page is never cached.
 export const dynamic = 'force-dynamic';
 
-/**
- * The trade screen.
- *
- * Mobile-first: the flow comes first and the market context sits underneath it,
- * because on a phone there is no second column and the thing you came to do
- * should not be below the thing you came to read.
- */
-export default async function TradePage() {
-  let pulse = null;
-  let pulseError: string | null = null;
-
-  try {
-    pulse = await fetchPulse();
-  } catch (error) {
-    pulseError = error instanceof Error ? error.message : 'The indexer is unreachable.';
-  }
+export default async function HomePage() {
+  const [board, pulse] = await Promise.all([
+    getBoardSnapshot('inProfit', 1),
+    fetchPulse().catch(() => null),
+  ]);
+  const featured = board.signals[0];
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-xl space-y-8">
       <AutoRefresh seconds={60} />
 
-      <Flow />
+      <section className="panel p-6 sm:p-8">
+        <div className="flex items-center justify-between">
+          <p className="eyebrow">Demo balance</p>
+          <span className="pill px-3 py-1 text-[0.7rem] font-semibold text-[var(--color-accent)]">
+            DEMO
+          </span>
+        </div>
+        <p className="data mt-6 flex flex-wrap items-baseline gap-2">
+          <span className="text-[2.8rem] leading-none font-semibold tracking-[-0.05em] sm:text-[3.4rem]">
+            10,000.00
+          </span>
+          <span className="text-[0.95rem] text-[var(--color-ink-muted)]">USDC</span>
+        </p>
+        <p className="mt-3 text-[0.82rem] text-[var(--color-ink-faint)]">
+          Simulated balance. Real prices, no signature.
+        </p>
+      </section>
 
-      <section className="space-y-4">
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <p className="eyebrow">Market pulse</p>
-            {pulse && (
-              <span
-                className="flex items-center gap-1.5 text-[0.75rem] text-[var(--color-ink-faint)]"
-                title={`Indexer lag ${pulse.indexerLagBlocks ?? '?'} blocks`}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-gain)]" />
-                live
-              </span>
-            )}
+      <div className="grid grid-cols-2 gap-3">
+        <Link
+          href="/trade"
+          className="cta flex min-h-16 items-center justify-center gap-2 px-5 text-[0.95rem]"
+        >
+          <TradeIcon />
+          Trade
+        </Link>
+        <Link
+          href="/copy"
+          className="ghost flex min-h-16 items-center justify-center gap-2 bg-[var(--color-surface-high)] px-5 text-[0.95rem] font-semibold text-[var(--color-ink)]"
+        >
+          <CopyIcon />
+          Copy
+        </Link>
+      </div>
+
+      <section>
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <p className="eyebrow">Market discovery</p>
+            <h1 className="display mt-2 text-[1.8rem] font-bold">Trending now</h1>
           </div>
-
-          {pulseError && (
-            <p className="mt-3 text-[0.85rem] leading-relaxed text-[var(--color-loss)]">
-              {pulseError}
-            </p>
-          )}
-
-          {pulse && (
-            <>
-              <p className="data mt-3 text-[2.6rem] leading-none font-medium">
-                {pulse.usdcBuyable}
-              </p>
-              <p className="mt-2 text-[0.85rem] leading-relaxed text-[var(--color-ink-muted)]">
-                contracts priced in USDC you can buy right now, of {pulse.buyableOrders} buyable and{' '}
-                {pulse.totalOrders} resting
-              </p>
-
-              <div className="mt-5 space-y-2">
-                {pulse.byUnderlying.map((row) => (
-                  <div
-                    key={row.underlying}
-                    className="flex items-center justify-between border-b border-[var(--color-hairline)] pb-2 text-[0.85rem] last:border-0"
-                  >
-                    <span className="data text-[var(--color-ink-muted)]">{row.underlying}</span>
-                    <span
-                      className={`data ${
-                        row.buyable > 0
-                          ? 'text-[var(--color-ink)]'
-                          : 'text-[var(--color-ink-faint)]'
-                      }`}
-                      title={
-                        row.buyable > 0
-                          ? `${row.buyable} buyable of ${row.total}`
-                          : 'Makers are bidding only, so there is nothing to buy'
-                      }
-                    >
-                      {row.buyable} / {row.total}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <p className="mt-5 text-[0.8rem] leading-relaxed text-[var(--color-ink-faint)]">
-                Only assets with resting sell orders can be bought, which on Base today is ETH and
-                BTC. OptionArena trades the contracts priced in USDC, so the budget you type is the
-                amount you spend. Calls are collateralised in the asset they deliver.
-              </p>
-            </>
-          )}
+          <Link href="/arena" className="text-[0.78rem] font-medium text-[var(--color-accent)]">
+            View arena
+          </Link>
         </div>
 
-        <div className="card p-6">
-          <p className="eyebrow">Where this runs</p>
-          <dl className="mt-4 space-y-3 text-[0.8rem]">
-            <div>
-              <dt className="text-[var(--color-ink-faint)]">Chain</dt>
-              <dd className="data mt-0.5 text-[var(--color-ink-muted)]">
-                {chainConfig.name} · {chainConfig.chainId}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--color-ink-faint)]">OptionBook</dt>
-              <dd className="data mt-0.5 break-all text-[var(--color-ink-muted)]">
-                {chainConfig.contracts.optionBook}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--color-ink-faint)]">OptionFactory</dt>
-              <dd className="data mt-0.5 break-all text-[var(--color-ink-muted)]">
-                {chainConfig.contracts.optionFactory}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-5 border-t border-[var(--color-hairline)] pt-4 text-[0.8rem] leading-relaxed text-[var(--color-ink-faint)]">
-            OptionArena deploys no contracts of its own. It calls the contracts Thetanuts has
-            already deployed.
-          </p>
+        {featured ? (
+          <Link
+            href="/arena"
+            className="panel flex min-h-28 items-center gap-4 p-5 transition-colors hover:border-[var(--color-accent)]/50"
+          >
+            <AssetMark signal={featured} className="h-11 w-11 shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[1rem] font-semibold">{instrumentLabel(featured)}</span>
+              <span className="mt-1 block text-[0.78rem] text-[var(--color-ink-faint)]">
+                {board.live ? 'Live Deribit signal' : 'Preview signal'} ·{' '}
+                {new Date(featured.expiry * 1000).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </span>
+            </span>
+            <span className="text-right">
+              <span className="data block text-[1rem] font-semibold text-[var(--color-gain)]">
+                {signalValue(featured, 'inProfit')}
+              </span>
+              <span className="mt-1 flex items-center justify-end gap-1 text-[0.72rem] text-[var(--color-ink-muted)]">
+                View <ChevronRightIcon className="h-3.5 w-3.5" />
+              </span>
+            </span>
+          </Link>
+        ) : (
+          <div className="panel p-6 text-[0.85rem] text-[var(--color-ink-muted)]">
+            No qualifying signals right now.
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center justify-between px-1 text-[0.75rem] text-[var(--color-ink-faint)]">
+          <span>
+            {pulse ? `${pulse.usdcBuyable} USDC-priced contracts live` : 'Live book reconnecting'}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${pulse ? 'bg-[var(--color-gain)]' : 'bg-[var(--color-loss)]'}`}
+            />
+            {pulse ? 'OptionBook live' : 'Unavailable'}
+          </span>
         </div>
       </section>
+
+      <Link
+        href="/leaderboard"
+        className="flex items-center justify-between rounded-2xl border border-[var(--color-hairline)] px-5 py-4 text-[0.85rem] text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-hairline-bright)] hover:text-[var(--color-ink)]"
+      >
+        See the ranked trade board
+        <ArrowUpRightIcon className="h-4 w-4" />
+      </Link>
     </div>
   );
 }

@@ -54,7 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ModeProvider liveAvailable={liveAvailable}>
           <Header />
           {/* The bottom padding clears the fixed tab bar on phones. */}
-          <main className="mx-auto max-w-5xl px-5 pt-7 pb-28 md:pb-16">{children}</main>
+          <main className="mx-auto max-w-5xl px-5 pt-7 pb-32 md:pb-16">{children}</main>
           <TabBar />
         </ModeProvider>
         <Toaster
