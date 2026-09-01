@@ -548,7 +548,39 @@ mapper reports the difference rather than hiding it.
 **Ranks trades, never traders.** Deribit's public trades carry no trader
 identity, so a track record is not derivable from public data at all.
 
-## 3.9 Read paths
+## 3.9 How to add a pipeline
+
+Every pipeline in this document follows the same shape. A new one should too, so
+that four people building separately produce something that reads as one system.
+
+**The five rules, in priority order:**
+
+1. **Nothing signs without a human seeing the maximum loss first.** Any pipeline
+   that can spend money ends in a human confirmation showing what can be lost, in
+   the unit actually being spent.
+2. **The model proposes, the code decides.** A model may choose *which* thing, and
+   explain why. It never supplies a price, a size or any other number, and it
+   never signs. Validate its output with zod against a set the code built.
+3. **Every amount goes through `lib/thetanuts/decimals.ts`.** `bigint` only,
+   decimals from the order's own collateral token, `assertMagnitude` before
+   signing. No raw `parseUnits` anywhere else — ESLint enforces it.
+4. **A dependency returning zero, null or empty is a question, not an answer.**
+   Find out whether it means "nothing" or "not supported", and say which in the
+   code.
+5. **Prove it against the real system before building on it.** Every bug found so
+   far was found by running against the live book, and every one of them
+   typechecked first.
+
+**Write the pipeline into §3 before building it.** Same discipline as §4.3 for
+the interface: describe the steps, name which rule above the design relies on,
+then write the code. A pipeline that exists only in a file is a pipeline nobody
+else can align to.
+
+**Where a pipeline is owned by another lane**, this document records it and
+defers — see §3.8. `docs/decisions.md` is where reasoning is settled; §3 is where
+the shape is written down.
+
+## 3.10 Read paths
 
 The three screens that only read. No writes, no signing.
 
