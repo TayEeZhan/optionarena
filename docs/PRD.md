@@ -682,22 +682,26 @@ there** — this table is the vocabulary the rest of this section relies on.
 
 | Token | Value | Used for |
 |---|---|---|
-| `--color-ground` | `#0b0b10` | Page background. Deep neutral, never `#000` |
-| `--color-surface` | `#14141c` | Cards |
-| `--color-surface-high` | `#1d1d28` | Raised surfaces, active segments |
-| `--color-hairline` | `#262633` | Card borders, dividers |
-| `--color-hairline-bright` | `#363648` | Input borders, chips |
-| `--color-ink` | `#f2f2f7` | Primary text |
-| `--color-ink-muted` | `#9e9eb3` | Body text |
-| `--color-ink-faint` | `#6b6b80` | Labels, hints |
-| `--color-accent` | `#7c5cff` | **Brand and actions only** |
-| `--color-accent-bright` | `#9a80ff` | Transaction hashes, links |
+| `--color-ground` | `#0a0c0a` | Page background. Deep neutral, never `#000` |
+| `--color-surface` | `#131813` | Cards |
+| `--color-surface-high` | `#1c221c` | Raised surfaces, active segments |
+| `--color-hairline` | `#252d25` | Card borders, dividers |
+| `--color-hairline-bright` | `#354035` | Input borders, chips |
+| `--color-ink` | `#eef3ef` | Primary text |
+| `--color-ink-muted` | `#9aa89e` | Body text |
+| `--color-ink-faint` | `#6a786d` | Labels, hints |
+| `--color-accent` | `#c7f751` | **Brand and actions only** |
+| `--color-accent-bright` | `#d8ff6e` | Transaction hashes, links |
 | `--color-gain` | `#3ddc97` | Profit. **Never brand** |
 | `--color-loss` | `#ff6b6b` | Loss, and the button that spends real money |
 
 **The accent never signals money and money never uses the accent.** That rule is
 why the Live button is drawn in the loss colour and the payoff chart's profit
 region uses the gain colour.
+
+The accent is the bright lime pinned by the build brief. Lime and the gain green
+are deliberately far apart in hue, lime being yellow-green and gain being mint,
+so a lime button is never misread as profit.
 
 ### Component vocabulary
 

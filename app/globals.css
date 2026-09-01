@@ -7,30 +7,32 @@
  * interface is desktop-only. Bold over dense: large type, generous spacing,
  * one primary action per screen.
  *
- * Deep neutral ground rather than pure black, one saturated accent used
- * sparingly, and generous corner radii so cards read as objects.
+ * Near-black ground with a slight green cast, one bright lime accent used
+ * sparingly, and generous corner radii so cards read as objects. The lime is
+ * the pinned brand direction from the build brief.
  *
  * The accent NEVER signals gain or loss. Profit and loss have their own two
- * colours and borrow nothing from the brand, so a green number always means
- * money and a violet surface never does.
+ * colours, so a number's colour always means money and a surface never does.
+ * Lime and the gain green are deliberately far apart in hue, lime being
+ * yellow-green and gain being mint, so a lime button is never read as profit.
  */
 
 @theme {
-  /* Ground and surfaces. Neutral with a slight violet bias, never #000. */
-  --color-ground: #0b0b10;
-  --color-surface: #14141c;
-  --color-surface-high: #1d1d28;
-  --color-hairline: #262633;
-  --color-hairline-bright: #363648;
+  /* Ground and surfaces. Near-black with a slight green cast, never #000. */
+  --color-ground: #0a0c0a;
+  --color-surface: #131813;
+  --color-surface-high: #1c221c;
+  --color-hairline: #252d25;
+  --color-hairline-bright: #354035;
 
-  --color-ink: #f2f2f7;
-  --color-ink-muted: #9e9eb3;
-  --color-ink-faint: #6b6b80;
+  --color-ink: #eef3ef;
+  --color-ink-muted: #9aa89e;
+  --color-ink-faint: #6a786d;
 
   /* The one accent. Actions and identity only. */
-  --color-accent: #7c5cff;
-  --color-accent-bright: #9a80ff;
-  --color-accent-ink: #0b0b10;
+  --color-accent: #c7f751;
+  --color-accent-bright: #d8ff6e;
+  --color-accent-ink: #0a0c0a;
 
   /* Semantic. Money, never branding. */
   --color-gain: #3ddc97;
