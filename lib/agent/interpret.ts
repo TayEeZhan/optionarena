@@ -92,9 +92,16 @@ export async function interpret(
     raw = await llm.complete({ system, user });
   } catch (error) {
     // A model outage must not take the product down. Fall back and say so.
+    //
+    // The provider's own error text is logged, never returned. It reached the
+    // browser once, carrying a request id and billing state, and a provider
+    // error is not something a user should have to read or a client should be
+    // trusted with.
+    console.error('[interpret] model call failed:', message(error));
+
     return {
       ...chooseByRules(request, shortlist),
-      decidedBy: `rules (model unavailable: ${message(error)})`,
+      decidedBy: 'rules (the model could not be reached)',
       promptVersion: 'none',
     };
   }
@@ -215,12 +222,17 @@ function chooseByRules(
   // Say that rather than dressing a put up as a bullish trade.
   const mismatch = wantCall && !instrument.isCall;
 
+  const configured = Boolean(getLlm());
+  const why = configured
+    ? `because the language model could not be reached`
+    : `because no language model is configured`;
+
   const reasoning = mismatch
-    ? `Chosen by rule, not by a model, because no language model is configured. ` +
+    ? `Chosen by rule, not by a model, ${why}. ` +
       `The view reads as bullish, but no contract priced in USDC expresses that today: ` +
       `on Base only puts are collateralised in USDC. This is the closest available ` +
       `contract, and it does not match the view. Treat it with care.`
-    : `Chosen by rule, not by a model, because no language model is configured. ` +
+    : `Chosen by rule, not by a model, ${why}. ` +
       `The view reads as ${direction}, so this is ${instrument.isCall ? 'a call' : 'a put'} ` +
       `at strike ${instrument.strikes.join(' / ')} on the ${request.risk} setting.`;
 

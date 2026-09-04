@@ -355,6 +355,39 @@ npm run check         # typecheck + lint + test. Run before pushing
 Scripts run with `--conditions=react-server` so the `server-only` guard resolves
 outside the bundler. Keep that flag on any new script importing from `lib/`.
 
+## 2.8 Deployment — what must be true in production
+
+Live at **<https://optionarena-uoqy.vercel.app>**, Vercel Hobby, Singapore region.
+
+| Variable | If unset in production |
+|---|---|
+| `DATABASE_URL` | **The feed and leaderboard silently lose every row.** A serverless filesystem is read-only and per-invocation, so the file store is not a fallback in production, it is data loss |
+| `ANTHROPIC_API_KEY` | The keyword selector runs instead of the agent, and says so. Track 02 then demonstrates a keyword matcher |
+| `PRIVATE_KEY` | Live trading is unavailable and the interface pins to demo mode |
+
+A variable existing in the Vercel dashboard is **not** the same as it having a
+value: the project was created with all seven names imported from `.env.example`
+and empty values, and both the agent and live trading were silently off for
+days. Check behaviour, never the dashboard:
+
+```bash
+curl -s -X POST https://optionarena-uoqy.vercel.app/api/interpret   -H 'content-type: application/json'   -d '{"view":"ETH drops below 2200 this week","budget":5,"risk":"balanced"}'
+```
+
+`decidedBy` names the model when the agent is live, and starts with `rules` when
+it is not. Environment changes need a redeploy to take effect.
+
+**Arming `PRIVATE_KEY` in production arms it for everyone.** There is no auth, so
+any visitor can spend that wallet. Keep `MAX_TRADE_USDC` small, fund with a few
+dollars, and consider demonstrating the live fill from a terminal instead.
+
+## 2.9 Funding a wallet to fill
+
+The USDC side of the book is **`aBasUSDC`**, Aave's interest-bearing USDC on Base
+(`0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB`), not plain USDC. A wallet holding
+plain USDC cannot fill: supply it to Aave on Base first, and the balance check in
+`execute.ts` will refuse until you do. Plus a few dollars of ETH for gas.
+
 ---
 ---
 
@@ -487,29 +520,32 @@ Ranking is by **return per unit of capital risked, never raw percentage gain.** 
 board sorted by percentage gain rewards whoever took the most risk and got
 lucky, which is the opposite of what this product is for.
 
-## 3.7 The arena layer — proposal withdrawn
+## 3.7 The arena layer — shipped
 
-The product is named OptionArena and the board is still empty. A competitive
-layer over the `strategies` table was proposed to close that gap, on the grounds
-that the signals lane was blocked. It no longer is.
+The competitive layer was proposed, then largely withdrawn on the grounds that
+the signals lane had unblocked. It then shipped anyway, and the routes are live:
+`/arena` and `/arena/matchup` put two ranked Deribit signals head to head, and
+`/copy` and `/copy/strategy` turn a sourced trade into something fillable.
 
-It was written up as a proposal in `docs/proposals/arena-layer.md` and has since
-been **largely withdrawn**. The argument rested on P3 being blocked; `decisions.md`
-§11 answered that question the same evening — Deribit maps onto Thetanuts 39 of
-39 exact — and `lib/signals/` now exists.
-
-**The board is more likely to arrive through P3 than beside it.**
-`lib/signals/rank.ts` already ranks trades by four user-selectable criteria with
-a plain-language reason each. Wiring the existing `/leaderboard` route to that
-output is the cheapest route from "OptionArena has no arena" to one that works.
+So the honest status is: **built, on top of the signals lane rather than beside
+it**, which is the outcome the withdrawal argued for.
 
 Two rules govern whatever fills the board, both from `decisions.md` §11 and §12:
 **rank trades, never traders** — Deribit's public trades carry no trader
 identity, so a track record is not derivable from public data — and every ranked
 row carries the reason it ranked, so the board is never a black box.
 
+One bug worth remembering, because it is the shape of bug this layer invites.
+`rank()` scores individual *trades*, and several trades on one instrument
+routinely take the top slots. Taking the first two produced `BTC 84,000 call VS
+BTC 84,000 call`: a contract facing itself. `pickMatchup` now requires two
+different contracts and returns null rather than inventing a matchup. **Any
+comparison built on ranked output must deduplicate by contract first.**
+
 The risk-gate idea from the first PRD does not survive. It presumed following a
 person; there are no persons to follow.
+
+`/leaderboard` is still empty by design. See §3.6.
 
 ## 3.8 The signals lane — pipeline
 
@@ -737,12 +773,19 @@ phones to clear the fixed tab bar, `TabBar` last.
 
 | Screen | Route | The one thing it must do |
 |---|---|---|
-| Trade | `/` | Get a view typed and interpreted. Flow first, market pulse below |
-| Preview | `/` step 02 | **Maximum loss as the largest element on screen** |
-| Proof | `/` step 03 | The hash, large and selectable, with the explorer link under it |
+| Home | `/` | Orient, then send the user to Trade or Copy |
+| Trade | `/trade` | Get a view typed and interpreted |
+| Preview | `/trade` step 02 | **Maximum loss as the largest element on screen** |
+| Proof | `/trade` step 03 | The hash, large and selectable, with the explorer link under it |
+| Arena | `/arena`, `/arena/matchup` | Two ranked signals, always different contracts |
+| Copy | `/copy`, `/copy/strategy` | Every difference from the sourced trade, disclosed |
 | Feed | `/feed` | Every row links to its transaction |
 | Board | `/leaderboard` | Rank honestly, or stay empty |
 | You | `/profile` | Custody stated plainly |
+
+`/feed` and `/profile` are reachable from the footer, not the tab bar. The bar
+holds five items and adding more made it unreadable; dropping them entirely once
+left the custody statement unreachable, which is worse.
 
 ### How to change the interface
 
