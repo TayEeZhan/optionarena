@@ -28,10 +28,13 @@ function anthropic(apiKey: string): Llm {
       const { default: Anthropic } = await import('@anthropic-ai/sdk');
       const client = new Anthropic({ apiKey });
 
+      // No `temperature`: claude-sonnet-5 rejects it as deprecated, and sending
+      // it failed every request with a 400 while the product quietly fell back
+      // to the rule-based selector. Determinism comes from the prompt telling
+      // the model to pick from a fixed shortlist, not from a sampling knob.
       const response = await client.messages.create({
         model: 'claude-sonnet-5',
         max_tokens: maxTokens,
-        temperature: 0,
         system,
         messages: [{ role: 'user', content: user }],
       });
