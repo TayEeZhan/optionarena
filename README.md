@@ -4,6 +4,8 @@
 
 A social options desk built on Thetanuts Finance V4, on Base mainnet.
 
+**Live demo: <https://optionarena-uoqy.vercel.app>**
+
 You write what you think the market will do, in plain language. An agent turns
 that into a defined-risk options position, shows you the maximum loss before
 anything is signed, executes it on-chain, and publishes the result with a
@@ -41,7 +43,8 @@ on the platform to be profitable, unless the data comes from Deribit or Derive
 traders, which would be genuinely useful. It means the product brings Thetanuts
 order flow it does not currently have.
 
-Signal sourcing is P3 and is **not built yet**. See [Status](#status).
+Signal sourcing is built. `npm run signals` ranks live Deribit flow and maps it
+onto the Thetanuts book; `/arena` and `/copy` are where it surfaces.
 
 ---
 
@@ -91,6 +94,10 @@ Measured against the live book, not assumed. Run `npm run book` to reproduce.
   cbBTC, not 5 dollars. OptionArena trades the USDC side of the book so the
   number you type is the number you spend. Bullish views are told this plainly
   rather than being handed a put.
+- **The USDC side is `aBasUSDC`**, Aave's interest-bearing USDC on Base
+  (`0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB`), not plain USDC. A wallet
+  holding plain USDC cannot fill: supply it to Aave on Base first. This catches
+  everyone once.
 
 Both limits are the market's, not the product's, and both are surfaced in the
 interface rather than hidden.
@@ -191,7 +198,10 @@ path be a large trade.
 
 ```
 app/
-  page.tsx            the four-step flow
+  page.tsx            home and discovery
+  trade/              the four-step flow
+  arena/              ranked signal head-to-head
+  copy/               copy a sourced strategy
   feed/               strategies with their transaction hashes
   leaderboard/        ranked by risk-adjusted return
   profile/            your executed history
