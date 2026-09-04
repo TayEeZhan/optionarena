@@ -804,6 +804,10 @@ work safe to do on a branch.
 
 ## 4.4 The demo
 
+The clicks, the timings, the pre-flight and what to do when something breaks on
+camera are in [`docs/demo-runsheet.md`](demo-runsheet.md). This section owns the
+narrative; that file owns the operation of it.
+
 1. **Describe a view in plain language.** "ETH drops below 2,200 this week."
 2. **The agent's reading** — the contract it chose and why, with confidence.
 3. **The maximum loss, large.** *"This is the most you can lose. Nothing can
