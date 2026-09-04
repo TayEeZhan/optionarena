@@ -1,13 +1,16 @@
 import Link from 'next/link';
 import { AssetMark, instrumentLabel, signalValue } from '@/components/SignalCard';
 import { ChevronRightIcon } from '@/components/Icons';
-import { getBoardSnapshot } from '@/lib/signals/board';
+import { getBoardSnapshot, pickMatchup } from '@/lib/signals/board';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ArenaPage() {
-  const board = await getBoardSnapshot('inProfit', 2);
-  const [left, right] = board.signals;
+  // A wider pool than the two shown, so the matchup can find a second
+  // contract that is genuinely different. See pickMatchup.
+  const board = await getBoardSnapshot('inProfit', 12);
+  const matchup = pickMatchup(board.signals);
+  const [left, right] = matchup ?? [null, null];
 
   return (
     <div className="mx-auto max-w-xl">

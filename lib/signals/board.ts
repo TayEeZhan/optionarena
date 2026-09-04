@@ -178,3 +178,23 @@ export async function getBoardSnapshot(
     };
   }
 }
+
+/**
+ * Two signals for a head-to-head comparison.
+ *
+ * The pair must be different CONTRACTS. `rank()` scores individual trades, and
+ * several trades on one instrument routinely take the top slots: measured on
+ * 4 Sep 2026, the three best-scoring signals were all BTC-7SEP26-84000-C at
+ * 9.2%. Taking the first two rendered "BTC 84,000 call VS BTC 84,000 call",
+ * a comparison of a thing with itself.
+ *
+ * Returns null when the board has no second distinct contract, so the caller
+ * shows an empty state rather than a fake matchup.
+ */
+export function pickMatchup(signals: RankedSignal[]): [RankedSignal, RankedSignal] | null {
+  const left = signals[0];
+  if (!left) return null;
+
+  const right = signals.find((signal) => signal.venueInstrument !== left.venueInstrument);
+  return right ? [left, right] : null;
+}
