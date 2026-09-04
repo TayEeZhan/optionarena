@@ -264,7 +264,7 @@ WETH`. See `docs/decisions.md`.
 | Tay Ee Zhan | SDK and execution |
 | Goh Sheng Kuan | Agent and prompts |
 | Ong Zi Qi | Signals and ranking |
-| - | Interface and flow |
+| Owen Ong | Interface and flow |
 
 AI tools used are declared in [`AI_TOOLS.md`](AI_TOOLS.md).
 
