@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMode } from './ModeProvider';
+import { ArenaIcon, CopyIcon, HomeIcon, TradeIcon, TrophyIcon } from './Icons';
 
 /**
  * Navigation, mobile-first.
@@ -17,10 +18,11 @@ import { useMode } from './ModeProvider';
  */
 
 const NAV = [
-  { href: '/', label: 'Trade' },
-  { href: '/feed', label: 'Feed' },
-  { href: '/leaderboard', label: 'Board' },
-  { href: '/profile', label: 'You' },
+  { href: '/', label: 'Home', icon: HomeIcon },
+  { href: '/trade', label: 'Trade', icon: TradeIcon },
+  { href: '/arena', label: 'Arena', icon: ArenaIcon },
+  { href: '/leaderboard', label: 'Ranks', icon: TrophyIcon },
+  { href: '/copy', label: 'Copy', icon: CopyIcon },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -34,10 +36,15 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--color-hairline)] bg-[var(--color-ground)]/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-        <Link href="/" className="flex items-baseline gap-[1px]">
-          <span className="display text-[1.4rem] font-extrabold">Option</span>
-          <span className="display text-[1.4rem] font-extrabold text-[var(--color-accent)]">
-            Arena
+        <Link href="/" className="flex items-center gap-2" aria-label="OptionArena home">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 text-[var(--color-accent)]">
+            ✦
+          </span>
+          <span className="flex items-baseline gap-[1px]">
+            <span className="display text-[1.4rem] font-extrabold">Option</span>
+            <span className="display text-[1.4rem] font-extrabold text-[var(--color-accent)]">
+              Arena
+            </span>
           </span>
         </Link>
 
@@ -167,29 +174,23 @@ export function TabBar() {
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-hairline)] bg-[var(--color-ground)]/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
     >
-      <ul className="flex items-stretch">
+      <ul className="grid grid-cols-5">
         {NAV.map((item) => {
           const active = isActive(pathname, item.href);
+          const Icon = item.icon;
           return (
-            <li key={item.href} className="flex-1">
+            <li key={item.href}>
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
-                className="flex flex-col items-center gap-1.5 py-3"
+                className={`flex min-h-[4.5rem] flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+                  active
+                    ? 'text-[var(--color-accent)]'
+                    : 'text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]'
+                }`}
               >
-                <span
-                  aria-hidden
-                  className={`h-1 w-1 rounded-full transition-colors ${
-                    active ? 'bg-[var(--color-accent)]' : 'bg-transparent'
-                  }`}
-                />
-                <span
-                  className={`text-[0.78rem] font-medium transition-colors ${
-                    active ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)]'
-                  }`}
-                >
-                  {item.label}
-                </span>
+                <Icon className="h-5 w-5" />
+                <span className="text-[0.68rem] font-medium sm:text-[0.74rem]">{item.label}</span>
               </Link>
             </li>
           );
