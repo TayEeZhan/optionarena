@@ -5,7 +5,12 @@ Every AI tool used on OptionArena is listed here.
 
 | Tool | Model | What it was used for | When |
 |---|---|---|---|
-| Claude Code | Claude Opus 5 | Repo scaffold, Thetanuts SDK integration, decimals helpers, agent interpret/price/execute, UI implementation | 31 Aug 2026 - ongoing |
+| Claude Code | Claude Opus 5 | Repo scaffold, Thetanuts SDK integration, decimals helpers, agent interpret/price/execute, signals lane, UI implementation | 31 Aug 2026 - ongoing |
+| Claude Code | Claude Opus 5 | `docs/PRD.md`, `docs/proposals/arena-layer.md`, the navigation and custody-disclosure fix, README and this file | 31 Aug 2026 - ongoing |
+| OpenAI Codex | Codex default model, not recorded at the time | Mobile-first interface: bottom tab bar, icon set, responsive header (`4ac3752`, PR #2) | 2 Sep 2026 |
+
+Every commit above was authored by a named team member who read and tested the
+output before committing. Attribution by lane is in the README team table.
 
 ## Runtime AI
 
