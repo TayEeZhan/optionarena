@@ -89,7 +89,7 @@ export async function interpret(
 
   let raw: string;
   try {
-    raw = await llm.complete({ system, user });
+    raw = await llm.complete({ system, user, maxTokens: 1500 });
   } catch (error) {
     // A model outage must not take the product down. Fall back and say so.
     //
@@ -108,6 +108,15 @@ export async function interpret(
 
   const parsed = AgentChoice.safeParse(extractJson(raw));
   if (!parsed.success) {
+    // Logged, never returned: the raw reply is needed to diagnose a schema
+    // mismatch, and the browser has no business seeing it.
+    console.error(
+      '[interpret] model reply did not validate:',
+      parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+      '| raw:',
+      raw.slice(0, 500),
+    );
+
     return {
       ...chooseByRules(request, shortlist),
       decidedBy: 'rules (model returned an unusable answer)',

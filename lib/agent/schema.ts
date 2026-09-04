@@ -31,12 +31,30 @@ export type ViewRequest = z.infer<typeof ViewRequest>;
  */
 export const AgentChoice = z.object({
   instrumentId: z.string().min(1),
-  /** Why this contract expresses the user's view. Plain language, one or two sentences. */
-  reasoning: z.string().min(10).max(600),
+  /**
+   * Why this contract expresses the user's view.
+   *
+   * Generous upper bound, then trimmed for display. An earlier 600-character
+   * cap rejected the whole answer when the model wrote a little too much,
+   * throwing away a valid contract choice over presentation. Be strict about
+   * WHICH contract was chosen, lenient about how it was described.
+   */
+  reasoning: z
+    .string()
+    .min(10)
+    .max(4000)
+    .transform((text) => (text.length > 600 ? `${text.slice(0, 597).trimEnd()}...` : text)),
   /** The direction the model read from the view. */
   direction: z.enum(['bullish', 'bearish', 'neutral']),
-  /** How confident the model is that the view maps onto this contract, 0 to 1. */
-  confidence: z.number().min(0).max(1),
+  /**
+   * How confident the model is, 0 to 1. Coerced because a model may return
+   * "0.8" or 80, and neither is a reason to discard the answer.
+   */
+  confidence: z.coerce
+    .number()
+    .catch(0.5)
+    .transform((value) => (value > 1 ? value / 100 : value))
+    .pipe(z.number().min(0).max(1)),
 });
 export type AgentChoice = z.infer<typeof AgentChoice>;
 
