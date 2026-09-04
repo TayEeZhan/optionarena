@@ -36,8 +36,8 @@ exist with a *bad* value. Read the answer carefully:
 |---|---|---|
 | `anthropic:claude-sonnet-5` | The agent is live | Record |
 | `rules` | No key is set | Set `ANTHROPIC_API_KEY`, redeploy |
-| `rules (the model could not be reached)` | **A key is set and the call is failing** | Read the Vercel runtime log for `[interpret] model call failed:` — usually no credit on the account, a bad key, or a model the account cannot use |
-| `rules (model returned an unusable answer)` | The model answered with something unparseable | Retry; if it repeats, record with the rule selector and say so |
+| `rules (the model could not be reached)` | **A key is set and the call is failing** | Read the Vercel runtime log for `[interpret] model call failed:` and believe what it says. Do not guess from the symptom — this was diagnosed as a billing problem it never was, when the log said a rejected SDK parameter |
+| `rules (model returned an unusable answer)` | The model replied and validation rejected it | The raw reply is logged server-side. Read it before assuming the model was at fault; a too-tight schema was the culprit last time, not the answer |
 
 ### Screen and room
 

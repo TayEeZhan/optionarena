@@ -98,3 +98,29 @@ implementations, and every buyable order on Base is physically settled.
 **Rule.** A zero, an empty array or a null from a dependency is a question, not
 an answer. Find out whether it means "nothing" or "not supported", and say which
 one in the code comment.
+
+---
+
+## 7. A graceful fallback hides the thing it is falling back from.
+
+**What happened.** The agent had never run in production. Three bugs stacked: a
+`temperature` parameter `claude-sonnet-5` rejects, so every call returned 400; a
+600-character cap on `reasoning` that threw away otherwise-valid answers; and
+`max_tokens: 700`, too small for a 40-instrument shortlist, truncating replies
+into unparseable JSON. All three landed in the same place — the rule-based
+selector, which is honest, clearly labelled and looks completely fine.
+
+**Why it matters.** The fallback was *well built*. It degrades instead of
+failing and says on screen that it did. That quality is exactly what let three
+bugs live for days: nothing was ever red, and the deployment looked healthy.
+
+**Rule.** A fallback needs a signal that distinguishes "not configured" from
+"configured and failing", and someone has to look at it. Check behaviour, not
+configuration — `decidedBy` naming a model is the only proof the agent ran. A
+variable present in a dashboard proves nothing, and neither does a green deploy.
+
+**Corollary.** When a call fails, read the provider's actual error before
+ranking causes. The first diagnosis here was "probably no credit, top up $5";
+the log said `temperature` is deprecated. The key and the balance were fine the
+whole time. A ranked guess offered ahead of available evidence reads as a
+finding and gets acted on — expand the log row first.
