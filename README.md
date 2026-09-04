@@ -261,10 +261,9 @@ WETH`. See `docs/decisions.md`.
 
 | Name | Lane |
 |---|---|
-| Tay Ee Zhan | SDK and execution |
-| Goh Sheng Kuan | Agent and prompts |
-| Ong Zi Qi | Signals and ranking |
-| Owen Ong | Interface and flow |
+| Tay Ee Zhan | SDK, execution and signals |
+| Goh Sheng Kuan | Agent, prompts and product spec |
+| Ong Zi Qi (Owen) | Interface and flow |
 
 AI tools used are declared in [`AI_TOOLS.md`](AI_TOOLS.md).
 
