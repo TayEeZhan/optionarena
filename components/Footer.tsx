@@ -18,6 +18,12 @@ import Link from 'next/link';
  * The custody line below is therefore unconditional. It is not a fallback and
  * does not depend on server state. See the PRD non-negotiables: never hide the
  * custody limitation.
+ *
+ * It has to describe both paths now. Connected wallets landed and the line
+ * still read "you are not connecting your own", which was false on every screen
+ * from the moment that shipped — the same failure as the balance card claiming
+ * a demo figure while the app was configured to sign. A disclosure that has
+ * stopped being true is worse than none, because it is read and believed.
  */
 export function Footer() {
   return (
@@ -38,8 +44,9 @@ export function Footer() {
       </nav>
 
       <p className="mx-auto mt-4 max-w-md text-center text-[0.72rem] leading-relaxed text-[var(--color-ink-faint)]">
-        OptionArena signs from one server wallet. You are not connecting your own, and this is a
-        product demonstration rather than self-custody.
+        Connect a wallet and you sign every transaction yourself, with your own funds. Without one,
+        OptionArena is a demonstration: trades are simulated, and anything signed is signed by a
+        single shared server wallet rather than by you.
       </p>
     </footer>
   );
