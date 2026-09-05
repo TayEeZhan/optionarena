@@ -19,6 +19,7 @@ const EXPECTED: Record<string, string> = {
   users: 'accounts, including Google sign-in',
   friendships: 'who follows whom',
   battles: 'head-to-head contests',
+  calls: 'calls on an arena matchup',
 };
 
 async function main() {
