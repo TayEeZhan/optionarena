@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMode } from './ModeProvider';
+import { ConnectWallet } from './ConnectWallet';
 import { ArenaIcon, CopyIcon, FriendsIcon, HomeIcon, TradeIcon, TrophyIcon } from './Icons';
 
 /**
@@ -69,7 +70,10 @@ export function Header() {
           })}
         </nav>
 
-        <ModeSwitch />
+        <div className="flex items-center gap-2">
+          <ConnectWallet />
+          <ModeSwitch />
+        </div>
       </div>
 
       {/*
