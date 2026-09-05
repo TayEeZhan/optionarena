@@ -5,7 +5,7 @@ import { AssetMark, instrumentLabel, signalValue } from '@/components/SignalCard
 import { BalanceCard } from '@/components/BalanceCard';
 import { getBoardSnapshot } from '@/lib/signals/board';
 import { fetchPulse } from '@/lib/thetanuts/book';
-import { walletBalance } from '@/lib/thetanuts/balance';
+import { usdcCollateral, walletBalance } from '@/lib/thetanuts/balance';
 import { getStore } from '@/lib/db/store';
 
 export const dynamic = 'force-dynamic';
@@ -20,10 +20,11 @@ export const dynamic = 'force-dynamic';
 const DEMO_ALLOWANCE = 10_000;
 
 export default async function HomePage() {
-  const [board, pulse, wallet, strategies] = await Promise.all([
+  const [board, pulse, wallet, token, strategies] = await Promise.all([
     getBoardSnapshot('inProfit', 1),
     fetchPulse().catch(() => null),
     walletBalance(),
+    usdcCollateral(),
     getStore()
       .list(200)
       .catch(() => []),
@@ -49,6 +50,7 @@ export default async function HomePage() {
         })}
         demoSpent={spent > 0}
         wallet={wallet}
+        token={token}
       />
 
       <div className="grid grid-cols-2 gap-3">

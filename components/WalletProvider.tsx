@@ -52,6 +52,8 @@ interface WalletContext {
   ensureBase: () => Promise<boolean>;
   /** The raw provider, for sending a transaction the user signs themselves. */
   provider: () => Eip1193 | null;
+  /** The connected account's balance of one token, or null if unreadable. */
+  readBalance: (token: string, decimals: number) => Promise<string | null>;
 }
 
 const Context = createContext<WalletContext | null>(null);
@@ -72,8 +74,60 @@ export function readableWalletError(error: unknown): string {
   return message ? message : 'Your wallet refused the request.';
 }
 
-/** Whether a wallet is installed is external state, not state we own. */
-const noSubscribe = () => () => {};
+/**
+ * Watch for a wallet appearing.
+ *
+ * This used to be a no-op, which was a real bug: `useSyncExternalStore` reads
+ * the snapshot once and then only when the subscriber says to, so with nothing
+ * ever signalling, the value latched at whatever it was during hydration.
+ * MetaMask commonly injects `window.ethereum` *after* hydration, and the app sat
+ * on "Get a wallet" forever with MetaMask installed.
+ *
+ * MetaMask fires `ethereum#initialized`, but not every wallet does, so a short
+ * poll backs it up and stops itself as soon as a provider exists.
+ */
+function subscribeToWallet(onChange: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  window.addEventListener('ethereum#initialized', onChange);
+
+  const timer = window.setInterval(() => {
+    if (injected()) {
+      window.clearInterval(timer);
+      onChange();
+    }
+  }, 250);
+
+  // Injection is an early-page-load event; a wallet that has not appeared in
+  // three seconds is not going to, and an interval that runs forever is a leak.
+  const stopPolling = window.setTimeout(() => window.clearInterval(timer), 3000);
+
+  return () => {
+    window.removeEventListener('ethereum#initialized', onChange);
+    window.clearInterval(timer);
+    window.clearTimeout(stopPolling);
+  };
+}
+
+/**
+ * Units to a display string, without pulling ethers into the browser bundle.
+ *
+ * Integer maths on the string, because a token amount that goes through a
+ * JavaScript number is the bug `lib/thetanuts/decimals.ts` exists to prevent.
+ */
+function formatUnitsString(units: bigint, decimals: number, places = 2): string {
+  const negative = units < 0n;
+  const digits = (negative ? -units : units).toString().padStart(decimals + 1, '0');
+  const whole = digits.slice(0, digits.length - decimals);
+  const fraction = decimals > 0 ? digits.slice(digits.length - decimals) : '';
+
+  const shown = fraction.slice(0, places).padEnd(places, '0');
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  return `${negative ? '-' : ''}${grouped}${places > 0 ? '.' + shown : ''}`;
+}
+
+const BALANCE_OF = '0x70a08231';
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<string | null>(null);
@@ -85,7 +139,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // wallet, so its snapshot is false, and the button appears after hydration
   // instead of flashing the wrong state first.
   const available = useSyncExternalStore(
-    noSubscribe,
+    subscribeToWallet,
     () => injected() !== null,
     () => false,
   );
@@ -185,6 +239,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const readBalance = useCallback(
+    async (token: string, decimals: number) => {
+      const eth = injected();
+      if (!eth || !account) return null;
+
+      try {
+        // A plain balanceOf call. The wallet is already an RPC connection, so
+        // asking it a public question needs no server round trip.
+        const data = `${BALANCE_OF}${account.replace(/^0x/, '').toLowerCase().padStart(64, '0')}`;
+        const raw = (await eth.request({
+          method: 'eth_call',
+          params: [{ to: token, data }, 'latest'],
+        })) as string;
+
+        if (!raw || raw === '0x') return null;
+        return formatUnitsString(BigInt(raw), decimals);
+      } catch {
+        // Unreadable is not zero, and the interface has to be able to tell
+        // those apart.
+        return null;
+      }
+    },
+    [account],
+  );
+
   return (
     <Context.Provider
       value={{
@@ -198,6 +277,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         disconnect,
         ensureBase,
         provider: injected,
+        readBalance,
       }}
     >
       {children}
