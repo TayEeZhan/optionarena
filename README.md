@@ -4,9 +4,10 @@
 
 ### → **[Open the app](https://optionarena-uoqy.vercel.app)** ←
 
-Nothing to install, no wallet to connect, no seed phrase. Open the link and
-trade. It runs on real Thetanuts market data on Base mainnet with a simulated
-balance, so you can learn the instrument without risking anything.
+Nothing to install and no seed phrase. Open the link and trade against real
+Thetanuts market data on Base mainnet with a simulated balance, so you can learn
+the instrument without risking anything. Connect MetaMask if and when you want
+to sign with your own funds — you keep custody either way.
 
 ---
 
@@ -86,22 +87,34 @@ battles. All of it read live from Base mainnet and Deribit.
 **Simulated:** the balance and the signature. The public site runs in demo mode
 with a 10,000 USDC paper balance.
 
-That is deliberate, and it is the correct production state. OptionArena signs
-**server-side from a single wallet** — there is no per-user wallet and no
-user-level authentication. Arming that wallet on a public URL would let any
-visitor spend it. So the deployed site cannot sign, and the toggle in the top
-bar stays pinned to demo.
+There are two ways a trade can be signed, and they are kept strictly apart.
 
-The live path itself is not a stub. Run the app with a key present and the Live
-toggle unlocks, the paper balance is replaced by the wallet's real on-chain
-USDC, and the trade goes to the real OptionBook. It is placed from a developer
-machine, by a person holding the key, one command at a time — which is the
-control the public site does not have.
+**Your own wallet.** Connect MetaMask — or Rabby, the Coinbase extension, or
+Phantom in EVM mode; any injected EIP-1193 wallet works — and you sign with your
+own funds and keep custody. The server builds the calldata and holds no key,
+broadcasts nothing, and still enforces the `MAX_TRADE_USDC` ceiling, because a
+guardrail against a large first trade does not stop applying just because the
+money is yours. The chain is re-checked immediately before every send: someone
+can switch networks mid-flow, and Base calldata signed on another chain is money
+gone. Nothing is remembered between page loads, because a wallet that silently
+reattaches is a wallet you did not knowingly connect.
 
-We would build connected wallets for a real launch, and the SDK's
-`encodeFillOrder` already returns calldata any wallet connector could sign, so
-it is a contained change. We are saying this plainly rather than implying
-self-custody we did not build.
+**Our server wallet**, which backs demo mode only. It is not armed on the public
+deployment and it should not be: there is no user-level authentication, so a key
+on a public URL would let any visitor spend it. A fill from that wallet is
+placed from a developer machine, by a person holding the key, one command at a
+time.
+
+What the connected-wallet path can do today is honest and limited: connect,
+switch or add Base, read your balance, and send a real approval. The fill is
+attempted for real and reverts, because every buyable order is physically
+settled — the same upstream blocker described below. The protocol's own error is
+shown verbatim rather than softened, because someone who has just signed a
+transaction is owed the actual reason.
+
+Connected wallets needed no new dependency. The SDK's `encodeFillOrder` already
+returns unsigned calldata, and ethers ships `BrowserProvider`, so the whole path
+is the server building two calls and signing neither.
 
 ---
 
@@ -157,6 +170,7 @@ surfaced in the interface instead of hidden.
 | Real book, real pricing, real maximum loss | **Done** |
 | The agent executes | **Done.** Model behind an adapter, with a rule-based fallback that labels itself as one |
 | Sourced signals, ranking, copy flow | **Done.** Live Deribit flow ranked and mapped onto tradable contracts — 39 of 39 buyable puts matched exactly on the day we measured |
+| Connected wallets | **Done.** Connect MetaMask and sign with your own funds. The server builds calldata and holds no key. Approvals go through on-chain; the fill hits the blocker below |
 | The live trading path | **Working.** With a key present, live mode reads the real on-chain wallet balance rather than the paper one, the OptionBook approval is on-chain, and the fill simulates cleanly against live chain state |
 | A recorded mainnet fill | **Not yet.** The buy side is blocked upstream (§14), so the fill goes through the sell path; the hash goes into §9 when it is placed |
 
@@ -236,13 +250,18 @@ app/
   api/
     interpret/        view -> chosen contract -> real quote. Signs nothing
     execute/          re-prices, checks slippage, then signs
+    calldata/         unsigned calls for a connected wallet. Holds no key
     auth/google/      OAuth start and callback
+components/
+  WalletProvider.tsx  injected EIP-1193 wallets, connect and chain checks
+  WalletTrade.tsx     approve then fill, signed by the person, not the server
 lib/
   thetanuts/
     client.ts         SDK setup. The only file that reads the key
     book.ts           reads the live OptionBook, normalises orders
     quote.ts          maximum loss, payoff and breakeven from real pricing
     decimals.ts       ALL token math goes through here
+    calldata.ts       builds the calls a connected wallet signs itself
   agent/
     interpret.ts      plain language -> a live contract, zod-validated
     execute.ts        every pre-flight check, then the signature
