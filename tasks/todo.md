@@ -11,11 +11,22 @@ Submission closes **5 Sep 2026, 11:59 PM MYT**. Pitch at APU on 6 Sep.
 - [x] Build `scripts/verify-fill.ts` with every pre-flight check
 - [x] Prove the path short of signing: price, magnitude, balance, allowance,
       `callStaticFillOrder` against live chain state
-- [ ] **Place one real trade on Base mainnet** — needs a funded key
-- [ ] **Record the hash in `docs/decisions.md`** as evidence
+- [x] Fund the key — 1 aBasUSDC and gas are on Base, and the OptionBook
+      allowance is granted on-chain (`0x39dcfb41…`, an approval, not a fill)
+- [ ] **Place one real trade on Base mainnet** — **blocked inside the
+      protocol**, not on our side. Every buyable order is physically settled
+      and reverts with `Panic(0x11)` in the OptionBook. Seven hypotheses ruled
+      out, including the allowance. See `docs/decisions.md` §14
+- [x] **Record the evidence in `docs/decisions.md`** — §14, with the decoded
+      calldata and the approval hash
 
-> Until the hash exists, the Track 2 entry is not valid. This is the single
-> highest-priority item in the project.
+> The blocker changed on 5 Sep. It was "no funded key"; it is now "the
+> physically settled side of the book does not fill for a taker". Money will
+> not solve it and neither will more simulation — the next move is asking the
+> Thetanuts team whether that path is fillable today.
+>
+> Until a fill exists the Track 2 entry rests on the diagnosis rather than on a
+> hash. Do not describe the approval transaction as a trade.
 
 ## P1 — make the interface real
 
