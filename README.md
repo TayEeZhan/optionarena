@@ -249,7 +249,7 @@ WETH`. See `docs/decisions.md`.
 | P0 · prove a real fill is possible | Path built and dry-run verified. **The live hash is not yet recorded** |
 | P1 · real book, real pricing, real maximum loss | Done |
 | P2 · the agent executes | Done. Model behind an adapter, rule-based fallback |
-| P3 · sourced signals, ranking, copy flow | Not started |
+| P3 · sourced signals, ranking, copy flow | Done. Live Deribit flow is ranked and mapped onto tradable Thetanuts contracts |
 | P4 · submission | Not started |
 
 **The submission is not valid until a real mainnet hash is in
