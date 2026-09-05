@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { ConnectWalletPanel } from '@/components/ConnectWalletPanel';
 import { GoogleMark } from '@/components/Icons';
 import { googleConfigured } from '@/lib/auth/google';
 import { clearSession, getSession, normaliseHandle, setSession } from '@/lib/auth/session';
@@ -126,6 +127,8 @@ export default async function JoinPage({
           {session ? 'Use this handle instead' : 'Continue with a handle'}
         </button>
       </form>
+
+      <ConnectWalletPanel />
 
       {/*
        * Under both buttons, not just the handle. Someone who has just signed in

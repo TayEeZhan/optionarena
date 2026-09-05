@@ -34,15 +34,43 @@ export interface WalletBalance {
  * three the answer is "we do not know", and a balance card must not guess at a
  * number.
  */
-export async function walletBalance(): Promise<WalletBalance | null> {
-  const account = signerAddress();
-  if (!canSign() || !account) return null;
+/** The token the USDC side of the book settles in. */
+export interface CollateralDescriptor {
+  address: string;
+  decimals: number;
+  symbol: string;
+}
 
+/**
+ * Which token a USDC-priced order is paid in, read from an order.
+ *
+ * Deliberately independent of any signing key: the browser needs this to read a
+ * *connected* wallet's balance, and that has nothing to do with whether the
+ * server can sign. It was previously only reachable inside `walletBalance()`,
+ * which returns null without a key — so on the deployment, where there is no
+ * key, the token was unavailable exactly when a user wallet needed it.
+ */
+export async function usdcCollateral(): Promise<CollateralDescriptor | null> {
   try {
     const priced = (await fetchBuyable()).find(isUsdcCollateral);
     if (!priced) return null;
 
     const { address, decimals, symbol } = priced.collateral;
+    return { address, decimals, symbol };
+  } catch {
+    return null;
+  }
+}
+
+export async function walletBalance(): Promise<WalletBalance | null> {
+  const account = signerAddress();
+  if (!canSign() || !account) return null;
+
+  try {
+    const token = await usdcCollateral();
+    if (!token) return null;
+
+    const { address, decimals, symbol } = token;
     const units = await signingClient().erc20.getBalance(address, account);
 
     return { display: formatUnits(units, decimals), symbol, address: account };
