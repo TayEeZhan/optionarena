@@ -103,5 +103,7 @@ Three bugs were found by running against the live book rather than by reasoning
 about it, and all three would have cost real money. They are written up in
 `tasks/lessons.md` and `docs/decisions.md`.
 
-The honest gap: no real fill has been placed, because that needs a funded key.
-Everything up to the signature is proven.
+The honest gap: no real fill has been placed. The key **is** funded and the
+OptionBook allowance is granted; the fill reverts inside the protocol with
+`Panic(0x11)` on every physically settled order. Everything up to the
+signature is proven. See `docs/decisions.md` §14.
