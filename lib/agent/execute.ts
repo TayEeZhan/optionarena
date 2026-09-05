@@ -58,6 +58,21 @@ export async function execute(
     );
   }
 
+  // Physically settled contracts revert. Confirmed twice: `Panic(0x11)` from
+  // the OptionBook across 62 orders, nine sizes and three RPCs, and then by the
+  // Thetanuts team, who said physical settlement is not routed into the SDK
+  // yet. Refusing here means the app never broadcasts a transaction we already
+  // know fails. Demo mode is untouched, so step 02 still prices these and shows
+  // a real maximum loss. See docs/decisions.md sections 14 and 15.
+  if (instrument.isPhysical) {
+    throw new ExecutionRefused(
+      `${instrument.structure} contracts cannot be filled yet. Physical settlement ` +
+        `is not routed into the Thetanuts SDK, and the OptionBook reverts with an ` +
+        `arithmetic overflow. The prices and the maximum loss above are real; only ` +
+        `the signature is unavailable.`,
+    );
+  }
+
   const { decimals, symbol, address } = instrument.collateral;
   const client = signingClient();
 
@@ -201,4 +216,94 @@ export async function dryRun(
 /** Convert a human budget to chain units for this instrument. Exported for tests. */
 export function budgetToUnits(instrument: Instrument, budget: number): bigint {
   return toUnits(budget, instrument.collateral.decimals);
+}
+
+/**
+ * Sell into a resting bid by posting collateral.
+ *
+ * The buy side is blocked upstream, so this is the only path that reaches the
+ * chain. It runs the same checks as `execute()` in the same order, because the
+ * checks are the point: a second, looser path would defeat them.
+ *
+ * **The risk is not the buy side's risk.** A buyer's worst case is the premium
+ * paid. A seller posts collateral and the worst case is bounded by what was
+ * posted. This function therefore takes a collateral amount, not a budget, and
+ * reports no premium figure: the SDK's preview derives `numContracts` from the
+ * amount passed, so a premium computed from it would just echo the input. The
+ * real economics are measured on-chain by `scripts/verify-sell.ts`.
+ *
+ * @param instrument a resting bid from `fetchSellable`
+ * @param collateral how much to post, in whole units of the collateral token
+ */
+export async function executeSell(
+  instrument: Instrument,
+  collateral: number,
+): Promise<ExecutionResult> {
+  if (!canSign()) {
+    throw new ExecutionRefused(
+      'OptionArena has no signing key configured, so it cannot trade. ' +
+        'Set PRIVATE_KEY to enable the live path, or stay in demo mode.',
+    );
+  }
+
+  if (!instrument.makerIsBuying) {
+    throw new ExecutionRefused(
+      'That order is an offer, not a bid. executeSell fills bids; use execute() to buy.',
+    );
+  }
+
+  const { decimals, symbol, address } = instrument.collateral;
+  const client = signingClient();
+
+  const ceiling = maxTradeUsdc();
+  if (collateral > ceiling) {
+    throw new ExecutionRefused(
+      `This trade posts ${collateral} ${symbol}, above the ${ceiling} ceiling set by ` +
+        `MAX_TRADE_USDC. Raise the ceiling deliberately if that is really intended.`,
+    );
+  }
+
+  const post = toUnits(collateral, decimals);
+
+  // Prove the magnitude against this order's own token, exactly as the buy
+  // path does. This is the check that catches a decimals mistake before it
+  // becomes an irreversible transfer.
+  assertMagnitude(post, collateral, decimals, `Collateral in ${symbol}`);
+
+  await client.assertNetwork();
+  const account = await client.getSignerAddress();
+
+  const balance = await client.erc20.getBalance(address, account);
+  if (balance < post) {
+    throw new ExecutionRefused(
+      `The wallet holds ${fromUnits(balance, decimals)} ${symbol} but this posts ` +
+        `${fromUnits(post, decimals)} ${symbol}. Either fund ${account}, or retry with ` +
+        `--collateral ${Math.floor(Number(fromUnits(balance, decimals)) * 10) / 10}.`,
+    );
+  }
+
+  await client.erc20.ensureAllowance(address, client.getContractAddress('optionBook'), post);
+
+  // The last gate. A resting bid can be requoted or taken between reading the
+  // book and signing, and this is where that shows up rather than in a reverted
+  // transaction that has already cost gas.
+  const simulation = await client.optionBook.callStaticFillOrder(instrument.raw, post);
+  if (!simulation.success) {
+    throw new ExecutionRefused(
+      `The bid cannot be filled right now: ${simulation.error?.message ?? 'the contract rejected it'}. ` +
+        `Resting orders expire quickly. Read the book again and retry.`,
+    );
+  }
+
+  const receipt = await client.optionBook.fillOrder(instrument.raw, post);
+
+  return {
+    txHash: receipt.hash,
+    explorerUrl: explorerTx(receipt.hash),
+    spent: post,
+    collateralSymbol: symbol,
+    collateralDecimals: decimals,
+    blockNumber: receipt.blockNumber,
+    gasUsed: receipt.gasUsed?.toString() ?? '0',
+  };
 }

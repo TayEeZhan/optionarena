@@ -210,6 +210,60 @@ export async function fetchBuyable(
   return [...best.values()].sort((a, b) => a.expiry - b.expiry || a.strikes[0] - b.strikes[0]);
 }
 
+/**
+ * True only for plain USDC, never Aave's aBasUSDC.
+ *
+ * Deliberately narrower than `isUsdcCollateral`, which matches both because a
+ * substring test on the symbol cannot tell them apart. The two are not
+ * interchangeable on-chain: the buy side rests in aBasUSDC and the fills that
+ * actually succeed rest in plain USDC.
+ */
+function isPlainUsdc(instrument: Instrument): boolean {
+  return instrument.collateral.symbol === 'USDC';
+}
+
+/**
+ * Orders we can SELL into, by posting collateral against a resting bid.
+ *
+ * This exists because the buy side is blocked upstream. Every buyable order is
+ * physically settled, and filling one reverts with `Panic(0x11)` inside the
+ * OptionBook. The Thetanuts team confirmed it is a gap on their side: physical
+ * settlement is not routed into the SDK yet. See `docs/decisions.md` §14 and §15.
+ *
+ * Three filters, each for a measured reason:
+ *  - `makerIsBuying`, so the taker is the seller. This is the side that fills.
+ *  - plain USDC only. Every successful fill observed on-chain used it.
+ *  - not physical, per the sponsor's instruction.
+ *
+ * The risk here is NOT the same as the buy side. A buyer's worst case is the
+ * premium paid; a seller posts collateral and the worst case is bounded by it.
+ * Nothing in this file computes that number, because the SDK's preview is
+ * buyer-oriented: it derives `numContracts` from the amount passed, so any
+ * premium computed from it just echoes the input. Measure it on-chain instead.
+ */
+export async function fetchSellable(underlying?: string): Promise<Instrument[]> {
+  const book = await fetchBook();
+
+  const candidates = book
+    .filter((i) => i.makerIsBuying)
+    .filter((i) => isPlainUsdc(i))
+    .filter((i) => !i.isPhysical)
+    .filter((i) => i.availableCollateral > 0n)
+    .filter((i) => (underlying ? i.underlying === underlying : true));
+
+  // Same dedupe as the buy side, but the better price for a seller is the
+  // HIGHEST bid, not the lowest offer.
+  const best = new Map<string, Instrument>();
+  for (const instrument of candidates) {
+    const existing = best.get(instrument.id);
+    if (!existing || instrument.pricePerContract > existing.pricePerContract) {
+      best.set(instrument.id, instrument);
+    }
+  }
+
+  return [...best.values()].sort((a, b) => a.expiry - b.expiry || a.strikes[0] - b.strikes[0]);
+}
+
 /** A compact summary of what the book currently offers. */
 export interface MarketPulse {
   totalOrders: number;
