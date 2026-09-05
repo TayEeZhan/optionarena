@@ -89,11 +89,12 @@ export async function interpret(
 
   let raw: string;
   try {
-    // `prefill: '{'` starts the model's turn inside the object, so it cannot
-    // preface the answer with a sentence. Production was falling back to the
-    // rule-based selector with "model returned an unusable answer", which is
-    // this branch: the call succeeded and the reply would not parse.
-    raw = await llm.complete({ system, user, maxTokens: 1500, prefill: '{' });
+    // No prefill. Putting `{` in the model's mouth to force JSON is a standard
+    // trick and it is the wrong one here: deployed, it turned a reply that
+    // merely failed to parse into a call that errored outright, and the agent
+    // went from "unusable answer" to "could not be reached". Reading the reply
+    // properly is `extractJson`'s job, and it does not need the model's help.
+    raw = await llm.complete({ system, user, maxTokens: 1500 });
   } catch (error) {
     // A model outage must not take the product down. Fall back and say so.
     //
