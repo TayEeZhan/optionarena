@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { RankingSelector } from '@/components/RankingSelector';
 import {
   AssetMark,
@@ -43,7 +44,10 @@ export default async function LeaderboardPage({
       </div>
 
       {featured ? (
-        <section className="panel accent-ring mt-6 p-5 sm:p-6">
+        <Link
+          href={`/copy/strategy?id=${encodeURIComponent(featured.signal.id)}&criterion=${criterion}`}
+          className="panel accent-ring mt-6 block p-5 transition-colors hover:border-[var(--color-accent)]/40 sm:p-6"
+        >
           <div className="grid grid-cols-[1.8rem_2.75rem_minmax(0,1fr)_4.6rem] items-start gap-3">
             <span className="data pt-1 text-[1.1rem] font-semibold text-[var(--color-accent)]">
               #1
@@ -77,7 +81,7 @@ export default async function LeaderboardPage({
           <p className="mt-5 border-t border-[var(--color-hairline)] pt-5 text-[0.82rem] leading-relaxed text-[var(--color-ink-muted)]">
             {featured.signal.why}
           </p>
-        </section>
+        </Link>
       ) : (
         <div className="panel mt-6 p-8 text-center text-[0.9rem] text-[var(--color-ink-muted)]">
           No trades qualify for this ranking right now.

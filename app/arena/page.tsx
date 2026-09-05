@@ -49,7 +49,7 @@ export default async function ArenaPage() {
           </div>
 
           <Link
-            href="/arena/matchup"
+            href={`/arena/matchup?left=${encodeURIComponent(left.id)}&right=${encodeURIComponent(right.id)}`}
             className="cta mt-6 flex min-h-14 items-center justify-center gap-2 px-5 text-[0.95rem]"
           >
             View matchup

@@ -80,27 +80,3 @@ export function getStore(): StrategyStore {
 export function storeKind(): 'postgres' | 'file' {
   return process.env.DATABASE_URL ? 'postgres' : 'file';
 }
-
-/**
- * Rank strategies by risk-adjusted performance, not by raw return.
- *
- * A leaderboard sorted by percentage gain rewards whoever took the most risk
- * and got lucky. This scores return per unit of capital risked, and requires a
- * minimum number of trades before anyone ranks at all, so one lucky trade does
- * not top the board.
- */
-export interface LeaderboardRow {
-  trader: string;
-  trades: number;
-  /** Total realised and unrealised return, in USDC terms. */
-  totalReturn: number;
-  /** Total capital put at risk across all trades. */
-  totalRisked: number;
-  /** Return per unit risked. The column the board is sorted by. */
-  riskAdjusted: number;
-  /** Share of trades that made money. */
-  hitRate: number;
-}
-
-/** Minimum trades before a trader appears on the board. */
-export const MIN_TRADES_TO_RANK = 3;
