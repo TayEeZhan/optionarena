@@ -90,8 +90,13 @@ That is deliberate, and it is the correct production state. OptionArena signs
 **server-side from a single wallet** — there is no per-user wallet and no
 user-level authentication. Arming that wallet on a public URL would let any
 visitor spend it. So the deployed site cannot sign, and the toggle in the top
-bar stays pinned to demo. A live fill is placed from a developer machine, by a
-person holding the key, one command at a time.
+bar stays pinned to demo.
+
+The live path itself is not a stub. Run the app with a key present and the Live
+toggle unlocks, the paper balance is replaced by the wallet's real on-chain
+USDC, and the trade goes to the real OptionBook. It is placed from a developer
+machine, by a person holding the key, one command at a time — which is the
+control the public site does not have.
 
 We would build connected wallets for a real launch, and the SDK's
 `encodeFillOrder` already returns calldata any wallet connector could sign, so
@@ -152,7 +157,8 @@ surfaced in the interface instead of hidden.
 | Real book, real pricing, real maximum loss | **Done** |
 | The agent executes | **Done.** Model behind an adapter, with a rule-based fallback that labels itself as one |
 | Sourced signals, ranking, copy flow | **Done.** Live Deribit flow ranked and mapped onto tradable contracts — 39 of 39 buyable puts matched exactly on the day we measured |
-| A recorded mainnet fill | **Not yet.** The buy side is blocked upstream (§14). The sell path is built, tested and dry-run verified; the hash goes into §9 when it is placed |
+| The live trading path | **Working.** With a key present, live mode reads the real on-chain wallet balance rather than the paper one, the OptionBook approval is on-chain, and the fill simulates cleanly against live chain state |
+| A recorded mainnet fill | **Not yet.** The buy side is blocked upstream (§14), so the fill goes through the sell path; the hash goes into §9 when it is placed |
 
 ---
 
