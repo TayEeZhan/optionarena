@@ -189,6 +189,14 @@ Then do the three clicks, without hurrying:
 
 3. **Click "Interpret my view."** Land on a real quote for that expiry.
 
+**If the agent picks a different strike from the sourced trade, point at it.**
+That is the strongest thirty seconds available to you, not a stumble. Asked for
+a 2,350 put on a 5 budget it returned the 2,300, and said why: *"The 2,350
+strike itself costs more than your 5 budget allows, so this is the closest
+balanced-distance strike that still fits."* A model that quietly took the
+expensive one, or invented a price to make it fit, is the failure mode this
+whole product is built against.
+
 > "That is the whole loop. Real flow from a venue with depth, ranked with a
 > reason, mapped onto a contract that exists on Base, priced from the live book."
 
