@@ -83,9 +83,12 @@ export async function execute(
 
   const balance = await client.erc20.getBalance(address, account);
   if (balance < spend) {
+    // Exact figures: a shortfall smaller than the display precision otherwise
+    // reads as the wallet holding exactly what the trade needs.
     throw new ExecutionRefused(
-      `The wallet holds ${formatUnits(balance, decimals)} ${symbol} but the trade needs ` +
-        `${formatUnits(spend, decimals)} ${symbol}. Fund ${account} before trading.`,
+      `The wallet holds ${fromUnits(balance, decimals)} ${symbol} but the trade needs ` +
+        `${fromUnits(spend, decimals)} ${symbol}. Either fund ${account}, or retry with ` +
+        `--budget ${Math.floor(Number(fromUnits(balance, decimals)) * 10) / 10}.`,
     );
   }
 
@@ -158,8 +161,13 @@ export async function dryRun(
     const balance = await client.erc20.getBalance(address, account);
     checks.push(`Wallet holds ${formatUnits(balance, decimals)} ${symbol}`);
     if (balance < spend) {
+      // Exact figures, not the 2-decimal display. A shortfall of one millionth
+      // rendered as "Needs 1.00, holds 1.00", which reads as a contradiction.
+      const short = fromUnits(spend - balance, decimals);
       throw new ExecutionRefused(
-        `Needs ${formatUnits(spend, decimals)} ${symbol}, holds ${formatUnits(balance, decimals)}.`,
+        `Needs ${fromUnits(spend, decimals)} ${symbol} but holds ${fromUnits(balance, decimals)}, ` +
+          `short by ${short}. Retry with a smaller budget, for example ` +
+          `--budget ${Math.floor(Number(fromUnits(balance, decimals)) * 10) / 10}.`,
       );
     }
 
