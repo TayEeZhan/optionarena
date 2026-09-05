@@ -95,4 +95,10 @@ export interface ExecutedStrategy {
   live: boolean;
   /** Why a failed execution failed, in plain language. */
   error: string | null;
+  /**
+   * The handle that built this, or null for anything built before handles
+   * existed or by a visitor who has not claimed one. Attribution only: it
+   * carries no authority and gates nothing.
+   */
+  trader: string | null;
 }

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMode } from './ModeProvider';
-import { ArenaIcon, CopyIcon, HomeIcon, TradeIcon, TrophyIcon } from './Icons';
+import { ArenaIcon, CopyIcon, FriendsIcon, HomeIcon, TradeIcon, TrophyIcon } from './Icons';
 
 /**
  * Navigation, mobile-first.
@@ -23,6 +23,7 @@ const NAV = [
   { href: '/arena', label: 'Arena', icon: ArenaIcon },
   { href: '/leaderboard', label: 'Ranks', icon: TrophyIcon },
   { href: '/copy', label: 'Copy', icon: CopyIcon },
+  { href: '/friends', label: 'Friends', icon: FriendsIcon },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -174,7 +175,7 @@ export function TabBar() {
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-hairline)] bg-[var(--color-ground)]/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-6">
         {NAV.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
@@ -190,7 +191,7 @@ export function TabBar() {
                 }`}
               >
                 <Icon className="h-5 w-5" />
-                <span className="text-[0.68rem] font-medium sm:text-[0.74rem]">{item.label}</span>
+                <span className="text-[0.62rem] font-medium sm:text-[0.72rem]">{item.label}</span>
               </Link>
             </li>
           );

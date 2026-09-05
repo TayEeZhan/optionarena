@@ -9,6 +9,7 @@ import { canSign } from '@/lib/thetanuts/client';
 import { getStore } from '@/lib/db/store';
 import { formatUnits, fromUnits } from '@/lib/thetanuts/decimals';
 import { RISK_LEVELS, type ExecutedStrategy } from '@/lib/agent/schema';
+import { getHandle } from '@/lib/auth/session';
 import type { ExecuteResponse } from '@/lib/wire';
 
 export const dynamic = 'force-dynamic';
@@ -165,6 +166,7 @@ export async function POST(request: Request) {
       txHash: null,
       live: mode === 'live',
       error: null,
+      trader: await getHandle(),
     };
 
     if (mode === 'demo') {
