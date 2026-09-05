@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useMode } from './ModeProvider';
 import { ConnectWallet } from './ConnectWallet';
+import { useWallet } from './WalletProvider';
 import { ArenaIcon, CopyIcon, FriendsIcon, HomeIcon, TradeIcon, TrophyIcon } from './Icons';
 
 /**
@@ -34,6 +35,13 @@ function isActive(pathname: string, href: string): boolean {
 export function Header() {
   const pathname = usePathname();
   const { liveAvailable } = useMode();
+
+  // The banner below used to end "nothing can be signed", which stopped being
+  // true the moment connected wallets shipped: the Live switch is about THIS
+  // server's key, and a connected wallet signs for itself regardless of it.
+  // Telling someone nothing can be signed while the next screen offers them a
+  // real transaction is the worst version of that sentence to get wrong.
+  const { account } = useWallet();
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--color-hairline)] bg-[var(--color-ground)]/85 backdrop-blur-md">
@@ -86,8 +94,18 @@ export function Header() {
        */}
       {!liveAvailable && (
         <p className="border-t border-[var(--color-hairline)] bg-[var(--color-surface)] px-5 py-2 text-center text-[0.75rem] leading-relaxed text-[var(--color-ink-muted)]">
-          No signing key on this server, so this is demo mode only. The prices and the maximum loss
-          are real; nothing can be signed.
+          {account ? (
+            <>
+              This server holds no signing key, so its own trades are simulated — that is what the
+              greyed-out Live switch means. Your connected wallet signs for itself, and those
+              transactions are real.
+            </>
+          ) : (
+            <>
+              No signing key on this server, so its trades are simulated. The prices and the maximum
+              loss are real. Connect a wallet to sign with your own funds.
+            </>
+          )}
         </p>
       )}
     </header>
