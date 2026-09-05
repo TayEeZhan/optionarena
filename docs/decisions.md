@@ -280,3 +280,61 @@ never a black box.
 
 Open question 1, confirmed by the team on 31 Aug 2026. One codebase, one
 submission, both tracks. Nothing in the build needs to change.
+
+
+---
+
+## 14. The buyable side of the book reverts on-chain
+
+**Measured 5 Sep 2026. This is why no mainnet fill has been recorded.**
+
+Every order OptionArena can buy fails in simulation with `Panic(0x11)`, the
+Solidity arithmetic overflow/underflow panic, raised inside the OptionBook
+contract. Not a warning, not a gas problem: the transaction would revert.
+
+**What was ruled out**
+
+| Hypothesis | Test | Result |
+|---|---|---|
+| Trade too small | Simulated 0.5, 0.9, 1, 2, 5, 10, 25, 50, 100 | Fails at every size |
+| One bad order | Simulated all 62 buyable orders | All fail |
+| Expired resting orders | Checked each order's own deadline | 0 of 62 expired, ~70s of validity left |
+| Outdated SDK | Checked npm | 0.3.0 is the latest published |
+| Flaky public RPC | Same call via 3 independent RPCs | Identical `OVERFLOW` from all three |
+| Wrong function | Compared our selector to a successful fill | Both `0xa4761ec1` |
+
+**What the difference actually is**
+
+The OptionBook is live and being used: four successful fills in the hour we
+tested. Decoding one of them against our own calldata, word by word:
+
+| Word | A fill that succeeded | Ours |
+|---|---|---|
+| 5, collateral | `0x8335…` plain USDC | `0x4e65…` aBasUSDC |
+| 8, implementation | `0x7355…` cash-settled | `0x6ad5…` PHYSICAL |
+| 18-19, extraOptionData | empty | 32 bytes: the aBasWETH address |
+
+Our call is one 32-byte word longer, and that word is the extra data a
+physically settled contract carries. **The fills that work are cash-settled and
+collateralised in plain USDC. Every order we can buy is physically settled.**
+
+**Why that leaves nothing to buy**
+
+| Group | Orders | Side | Fills? |
+|---|---|---|---|
+| PHYSICAL_PUT, PHYSICAL_CALL | 124 | Maker sells, so we buy | Reverts with OVERFLOW |
+| PUT, LINEAR_CALL, spreads, RANGER (plain USDC) | 206 | Maker buys, so we would sell | Not buyable |
+
+Selling into the resting bids was also simulated, including from an address that
+had filled successfully an hour earlier and therefore held USDC with the
+OptionBook approved. Those calls fail too, without a revert reason.
+
+**Status.** Everything up to the signature is proven: pricing, the magnitude
+assertion, balance, allowance, and the network check all pass against the live
+chain. The wallet is funded with 1 aBasUSDC and gas on Base. The transaction
+that would follow reverts inside the protocol.
+
+This is a question for the Thetanuts team, not a fix on our side. It is written
+up here rather than left as a gap, because the evidence is the point: the
+pre-flight check caught a reverting transaction before it was signed, which is
+exactly what that check exists to do.
