@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BattleResultOverlay } from '@/components/BattleResultOverlay';
 import { notFound } from 'next/navigation';
 import { getHandle } from '@/lib/auth/session';
 import { getStore } from '@/lib/db/store';
@@ -37,8 +38,13 @@ export default async function BattlePage({ params }: { params: Promise<{ id: str
     timeZone: 'UTC',
   });
 
+  // Only a participant gets the moment, and only once per browser.
+  const mine = me ? resultFor(resolved, me) : null;
+
   return (
     <div className="mx-auto max-w-xl">
+      {mine && <BattleResultOverlay battleId={battle.id} outcome={mine} />}
+
       <Link
         href="/battles"
         className="text-[0.82rem] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
