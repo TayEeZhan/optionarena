@@ -94,34 +94,97 @@ async function main() {
     process.exit(1);
   }
 
-  const bids = await fetchSellable();
-  console.log(`\nResting bids we can sell into: ${bids.length}`);
+  const client = signingClient();
+  const optionBook = client.getContractAddress('optionBook');
+
+  // Approval has to come before simulation. `callStaticFillOrder` runs the real
+  // transfer path, so with no allowance EVERY candidate fails with "transfer
+  // amount exceeds allowance", whether or not it would actually fill. Simulating
+  // first made a working path look completely broken.
+  const allowance = await client.erc20.getAllowance(USDC, account, optionBook);
+  console.log(`\nOptionBook allowance: ${fromUnits(allowance, 6)} USDC`);
+
+  if (allowance < need) {
+    if (live) {
+      console.log('  Approving the OptionBook for this trade...');
+      await client.erc20.ensureAllowance(USDC, optionBook, need);
+      console.log('  Approved.');
+    } else {
+      console.log(
+        '  Not approved yet. A dry run signs nothing, so candidates that fail\n' +
+          '  only on allowance are shown as "pending" rather than as failures.',
+      );
+    }
+  }
+
+  const allBids = await fetchSellable();
+
+  // Opt-in only, via --min-hours. A longer-dated position is nicer to show on
+  // stage, but measured against the live book the bids that actually fill are
+  // the short-dated ETH and BTC spreads, and the longer-dated ones reject for
+  // unrelated reasons. A valid transaction hash matters more than a position
+  // that is still running, so the default filters nothing.
+  const minHours = Number(arg('--min-hours') ?? 0);
+  const longer = allBids.filter((bid) => bid.hoursToExpiry >= minHours);
+  const bids = longer.length > 0 ? longer : allBids;
+
+  console.log(`\nResting bids we can sell into: ${allBids.length}`);
+  console.log(
+    longer.length > 0
+      ? `  ${longer.length} expire at least ${minHours}h out, preferring those`
+      : `  none expire ${minHours}h out, so using the full set`,
+  );
+
   if (bids.length === 0) {
     console.error('Nothing to sell into right now.');
     process.exit(1);
   }
 
-  // Not every bid fills. Simulate candidates in order and take the first that
-  // passes, rather than giving up on the first rejection.
-  const client = signingClient();
+  // Not every bid fills. Simulate in order and take the first that passes,
+  // rather than giving up on the first rejection.
   let chosen: Instrument | null = null;
+  let pendingApproval: Instrument | null = null;
 
   console.log('\nSimulating candidates against live chain state:');
-  for (const bid of bids.slice(0, 12)) {
+  for (const bid of bids.slice(0, 20)) {
+    const label = describeInstrument(bid).padEnd(32);
+
+    // The SDK reports a rejection two different ways: a result with
+    // `success: false`, or a thrown error. Both carry the same revert reason,
+    // so classify one message rather than duplicating the logic per branch.
+    let message: string | null = null;
     try {
       const result = await client.optionBook.callStaticFillOrder(bid.raw, need);
       if (result.success) {
         chosen = bid;
-        console.log(`  ok     ${describeInstrument(bid)}`);
+        console.log(`  ok       ${label}`);
         break;
       }
-      console.log(
-        `  fails  ${describeInstrument(bid).padEnd(32)} ${result.error?.message ?? 'rejected'}`,
-      );
+      message = result.error?.message ?? 'rejected';
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.log(`  fails  ${describeInstrument(bid).padEnd(32)} ${message.slice(0, 50)}`);
+      message = error instanceof Error ? error.message : String(error);
     }
+
+    if (/exceeds allowance/.test(message)) {
+      // Only the approval is missing. This one would fill.
+      pendingApproval ??= bid;
+      console.log(`  pending  ${label} would fill once approved`);
+      continue;
+    }
+
+    const reason =
+      /reverted:? "?([^"(]*)/.exec(message)?.[1]?.trim() ??
+      /Panic due to ([A-Z]+)/.exec(message)?.[1] ??
+      message.slice(0, 44);
+    console.log(`  fails    ${label} ${reason}`);
+  }
+
+  if (!chosen && pendingApproval && !live) {
+    chosen = pendingApproval;
+    console.log(
+      '\n  Nothing simulated cleanly only because the OptionBook is not approved\n' +
+        '  yet. Running with --live approves first, then fills.',
+    );
   }
 
   if (!chosen) {
