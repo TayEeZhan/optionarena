@@ -184,6 +184,53 @@ export const battles = pgTable(
   ],
 );
 
+/**
+ * A call on an arena matchup: which of two sourced trades does better.
+ *
+ * A forecast, not a wager. Nothing is staked and nothing is transferred.
+ *
+ * Both sides are **snapshotted** rather than referenced. The matchup is picked
+ * from live Deribit flow and rotates within minutes, so a row pointing at
+ * signal ids would be unresolvable almost immediately. Everything resolution
+ * needs — strike, expiry, direction, the price paid — is copied in here, and
+ * after that the call never needs the board again.
+ */
+export const calls = pgTable(
+  'calls',
+  {
+    id: text('id').primaryKey(),
+    handle: text('handle').notNull(),
+    /** The two signal ids joined, so one person has one call per pairing. */
+    pairKey: text('pair_key').notNull(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    /** 'left' or 'right', as the matchup was shown. */
+    picked: text('picked').notNull(),
+    left: jsonb('left').$type<CallSide>().notNull(),
+    right: jsonb('right').$type<CallSide>().notNull(),
+    /** The later of the two expiries, in seconds. Nothing resolves before it. */
+    resolvesAt: bigint('resolves_at', { mode: 'number' }).notNull(),
+    /** 'left', 'right' or 'draw'. Null while the call is still open. */
+    winner: text('winner'),
+    resolvedAt: bigint('resolved_at', { mode: 'number' }),
+    /** The settlement prices the result came from, kept so it can be checked. */
+    settlement: jsonb('settlement').$type<Record<string, number>>(),
+  },
+  (table) => [index('calls_handle_idx').on(table.handle)],
+);
+
+/** One side of a call, frozen at the moment it was made. */
+export interface CallSide {
+  signalId: string;
+  label: string;
+  underlying: string;
+  isCall: boolean;
+  strike: number;
+  /** Seconds, matching `strategies.expiry`. */
+  expiry: number;
+  /** Price paid, in the venue's own convention: a fraction of the underlying. */
+  price: number;
+}
+
 export type StrategyRow = typeof strategies.$inferSelect;
 export type NewStrategyRow = typeof strategies.$inferInsert;
 export type SignalRow = typeof signals.$inferSelect;
