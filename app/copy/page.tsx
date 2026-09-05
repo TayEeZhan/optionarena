@@ -5,9 +5,38 @@ import { findMapped, getBoardSnapshot } from '@/lib/signals/board';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CopyPage() {
+type MatchFilter = 'featured' | 'exact' | 'near';
+
+function filterHref(filter: MatchFilter): string {
+  return filter === 'featured' ? '/copy' : `/copy?match=${filter}`;
+}
+
+function filterLabel(filter: MatchFilter): string {
+  switch (filter) {
+    case 'featured':
+      return 'Featured';
+    case 'exact':
+      return 'Exact match';
+    case 'near':
+      return 'Near match';
+  }
+}
+
+export default async function CopyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ match?: string }>;
+}) {
+  const requestedMatch = (await searchParams).match;
+  const match: MatchFilter =
+    requestedMatch === 'exact' || requestedMatch === 'near' ? requestedMatch : 'featured';
   const board = await getBoardSnapshot('inProfit', 20);
-  const featured = findMapped(board);
+  const featured =
+    match === 'exact'
+      ? board.mapped.find((mapped) => mapped.exact)
+      : match === 'near'
+        ? board.mapped.find((mapped) => mapped.instrument && !mapped.exact)
+        : findMapped(board);
 
   return (
     <div className="mx-auto max-w-xl">
@@ -16,15 +45,24 @@ export default async function CopyPage() {
       <p className="mt-3 text-[0.95rem] text-[var(--color-ink-muted)]">You approve every trade.</p>
 
       <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
-        <span className="shrink-0 rounded-full bg-[var(--color-accent)] px-4 py-2 text-[0.78rem] font-semibold text-[var(--color-accent-ink)]">
-          Featured
-        </span>
-        <span className="pill shrink-0 px-4 py-2 text-[0.78rem] text-[var(--color-ink-muted)]">
-          Exact match
-        </span>
-        <span className="pill shrink-0 px-4 py-2 text-[0.78rem] text-[var(--color-ink-muted)]">
-          Near match
-        </span>
+        {(['featured', 'exact', 'near'] as const).map((filter) => {
+          const active = filter === match;
+
+          return (
+            <Link
+              key={filter}
+              href={filterHref(filter)}
+              aria-current={active ? 'page' : undefined}
+              className={
+                active
+                  ? 'shrink-0 rounded-full bg-[var(--color-accent)] px-4 py-2 text-[0.78rem] font-semibold text-[var(--color-accent-ink)]'
+                  : 'pill shrink-0 px-4 py-2 text-[0.78rem] text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-accent)]/50 hover:text-[var(--color-accent)]'
+              }
+            >
+              {filterLabel(filter)}
+            </Link>
+          );
+        })}
       </div>
 
       {featured ? (
@@ -67,7 +105,8 @@ export default async function CopyPage() {
         </section>
       ) : (
         <div className="panel mt-7 p-8 text-center text-[0.9rem] text-[var(--color-ink-muted)]">
-          No ranked trade is available right now.
+          No {match === 'featured' ? 'ranked trade' : `${filterLabel(match).toLowerCase()} trade`}{' '}
+          is available right now.
         </div>
       )}
 
