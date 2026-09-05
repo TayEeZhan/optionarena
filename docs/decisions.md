@@ -297,11 +297,12 @@ contract. Not a warning, not a gas problem: the transaction would revert.
 | Hypothesis | Test | Result |
 |---|---|---|
 | Trade too small | Simulated 0.5, 0.9, 1, 2, 5, 10, 25, 50, 100 | Fails at every size |
-| One bad order | Simulated all 62 buyable orders | All fail |
+| One bad order | Simulated all 62 USDC-priced buyable orders | All fail |
 | Expired resting orders | Checked each order's own deadline | 0 of 62 expired, ~70s of validity left |
 | Outdated SDK | Checked npm | 0.3.0 is the latest published |
 | Flaky public RPC | Same call via 3 independent RPCs | Identical `OVERFLOW` from all three |
 | Wrong function | Compared our selector to a successful fill | Both `0xa4761ec1` |
+| aBasUSDC not approved | Approved 1.000000 on-chain, re-simulated | Identical `Panic(0x11)` |
 
 **What the difference actually is**
 
@@ -322,7 +323,7 @@ collateralised in plain USDC. Every order we can buy is physically settled.**
 
 | Group | Orders | Side | Fills? |
 |---|---|---|---|
-| PHYSICAL_PUT, PHYSICAL_CALL | 124 | Maker sells, so we buy | Reverts with OVERFLOW |
+| PHYSICAL_PUT, PHYSICAL_CALL | 124 total, 62 of them priced in USDC | Maker sells, so we buy | Reverts with OVERFLOW |
 | PUT, LINEAR_CALL, spreads, RANGER (plain USDC) | 206 | Maker buys, so we would sell | Not buyable |
 
 Selling into the resting bids was also simulated, including from an address that
@@ -331,8 +332,27 @@ OptionBook approved. Those calls fail too, without a revert reason.
 
 **Status.** Everything up to the signature is proven: pricing, the magnitude
 assertion, balance, allowance, and the network check all pass against the live
-chain. The wallet is funded with 1 aBasUSDC and gas on Base. The transaction
+chain. The wallet is funded with 1 aBasUSDC and gas on Base, and the
+OptionBook allowance has since been granted on-chain. The transaction
 that would follow reverts inside the protocol.
+
+**The allowance was the last hypothesis on our side, and it is now closed.**
+Every buy-side simulation above ran while the pre-flight was still reporting
+"OptionBook approval needed", which left one way for the panic to be ours: an
+overflow in an allowance or `transferFrom` path would look exactly like this.
+So the approval was sent for real and the simulation re-run.
+
+| | |
+|---|---|
+| Approval transaction | `0x39dcfb41e3e65a4305d9c424c82e6be13022bf28f34826bf5a3ba168e2561962` |
+| Block | 50908638, Base mainnet |
+| Allowance after | 1.000000 aBasUSDC to `0x1bDff855d6811728acaDC00989e79143a2bdfDed` |
+| Re-simulated fill | `ok OptionBook already approved for this size`, then the same `Panic(0x11)` |
+
+**That hash is an ERC-20 approval, not a filled option.** It is a real mainnet
+transaction from this project's wallet to the Thetanuts OptionBook and it proves
+the wallet, the collateral and the approval are all real. It does not prove a
+trade, and nothing in this repo or the submission may describe it as one.
 
 This is a question for the Thetanuts team, not a fix on our side. It is written
 up here rather than left as a gap, because the evidence is the point: the
