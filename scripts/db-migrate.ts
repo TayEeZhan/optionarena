@@ -13,8 +13,15 @@
  *
  *   DATABASE_URL="postgresql://..." npm run db:migrate
  *
- * This mirrors `lib/db/schema.ts`. If that file changes, change this too, or
- * use `npm run db:push` from a network where websockets work.
+ * This mirrors `lib/db/schema.ts` BY HAND, and only covers what has been added
+ * since the database was first created: `strategies` and `signals` are absent
+ * on purpose because they already exist. On a fresh database use
+ * `npm run db:push`, which reads the schema directly.
+ *
+ * **When a table is added to `schema.ts`, add it here too.** `calls` was added
+ * in one place and not the other, which meant `db:migrate` would have skipped
+ * it silently on exactly the networks that need `db:migrate` in the first
+ * place. Run `npm run db:status` afterwards; that is what it is for.
  */
 import 'dotenv/config';
 import { neon } from '@neondatabase/serverless';
@@ -67,6 +74,23 @@ const STATEMENTS: [label: string, sql: string][] = [
     `CREATE INDEX IF NOT EXISTS battles_challenger_idx ON battles (challenger)`,
   ],
   ['battles_opponent_idx', `CREATE INDEX IF NOT EXISTS battles_opponent_idx ON battles (opponent)`],
+  [
+    'calls',
+    `CREATE TABLE IF NOT EXISTS calls (
+       id            text   PRIMARY KEY,
+       handle        text   NOT NULL,
+       pair_key      text   NOT NULL,
+       created_at    bigint NOT NULL,
+       picked        text   NOT NULL,
+       "left"        jsonb  NOT NULL,
+       "right"       jsonb  NOT NULL,
+       resolves_at   bigint NOT NULL,
+       winner        text,
+       resolved_at   bigint,
+       settlement    jsonb
+     )`,
+  ],
+  ['calls_handle_idx', `CREATE INDEX IF NOT EXISTS calls_handle_idx ON calls (handle)`],
 ];
 
 async function main() {
