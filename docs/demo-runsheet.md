@@ -19,7 +19,9 @@ Do all of these. Two of them have caught a broken deployment already.
 | 3 | The book has contracts | `npm run book` | a non-zero USDC-priced count |
 | 4 | Storage is Postgres | open `/`, read the footer strip | `STORAGE: POSTGRES` |
 | 5 | Tests are green | `npm run check` | typecheck, lint, tests all pass |
-| 6 | **The copy loop closes** | `/leaderboard`, click row 3 | The strategy page shows **row 3's** trade, and "Build my trade" arrives with the box filled |
+| 6 | **Google sign-in works** | `/join` on the deployment | A "Continue with Google" button, and it signs you in |
+| 7 | **A settled battle exists** | `/battles` | At least one row not saying "Resolves …" |
+| 8 | **The copy loop closes** | `/leaderboard`, click row 3 | The strategy page shows **row 3's** trade, and "Build my trade" arrives with the box filled |
 
 ```bash
 for r in / /trade /arena /leaderboard /copy /feed /profile; do printf '%s -> ' "$r"; curl -s -o /dev/null -w '%{http_code}\n' "https://optionarena-uoqy.vercel.app$r"; done
@@ -61,13 +63,21 @@ This is the version the hackathon asks for, and Track 02 needs it.
 Do not imply a fill happened. Say this, in these words or close to them:
 
 > "The signing path is built and proven — seven checks before anything is
-> signed, and a dry run against the live book. What you are watching is demo
-> mode: the same real prices from the same live book, the same maximum-loss
-> calculation, stopping at the signature. We have not placed a mainnet fill
-> yet."
+> signed, and a dry run against the live book. What stops it is not us: every
+> order we can buy on Base is physically settled, and those revert inside the
+> OptionBook with an arithmetic overflow. We ruled out seven causes, including
+> sending a real approval on-chain to eliminate the last one. Our pre-flight
+> caught a reverting transaction before it was signed, which is exactly what it
+> is for."
 
-Then move straight on. One clean sentence beats thirty seconds of hedging, and a
-judge will respect it more than a vague claim.
+Then move straight on. That is a stronger position than a lucky fill, because it
+shows the safety check doing its job on real chain state — but only if you say
+it once, plainly, and keep going. See `docs/decisions.md` §14 for the decoded
+calldata if a judge asks in Q&A.
+
+**The wallet is funded and the allowance is granted.** If anyone asks whether it
+is a money problem: no. `0x39dcfb41…` on Base is our approval transaction. It is
+an approval, **not a filled option** — do not call it a trade.
 
 **Record Version B today even if you expect a hash tomorrow.** A video that
 exists is worth more than a better one that does not, and re-recording one beat
@@ -84,11 +94,16 @@ is cheap.
 | 0:50–1:20 | Describe a view in plain language | `/` step 01 |
 | 1:20–2:10 | **The agent's reading, and the maximum loss** | step 02 |
 | 2:10–2:50 | Prove it — Version A or B | step 03 |
-| 2:50–3:45 | **Copy a sourced trade, end to end** | `/leaderboard` → `/copy/strategy` → `/trade` |
-| 3:45–4:00 | Custody, said plainly | `/profile` or the footer |
-| 4:00–4:30 | Close | `/` |
+| 2:50–3:35 | **Copy a sourced trade, end to end** | `/leaderboard` → `/copy/strategy` → `/trade` |
+| 3:35–4:20 | **Friends, and a battle that settles** | `/join` → `/friends` → `/battles` |
+| 4:20–4:35 | Custody, said plainly | `/profile` or the footer |
+| 4:35–4:55 | Close | `/` |
 
 Rehearse out loud with a timer. The beat that always overruns is 1:20–2:10.
+
+That lands at about 4:55 against a five-minute cap, which is tight. If you need
+room, the problem statement at 0:00 compresses to fifteen seconds without losing
+anything — do not take it out of 1:20 or 3:35.
 
 ---
 
@@ -202,7 +217,41 @@ whole product is built against.
 
 If a beat has to be cut for time, cut something else. This one is the product.
 
-### 3:30 — Custody
+### 3:35 — Friends, and a battle that settles
+
+The social half. Sign in on camera — the Google button is real and live.
+
+> "Options are miserable alone. So this is built around people you know."
+
+Three things, quickly:
+
+1. **`/join` → Continue with Google.** Land back signed in, with a handle
+   derived from your email.
+
+   > "A real account. Though it is worth saying: signing in does not hold your
+   > money. One server wallet signs everything, and the app says so on every
+   > screen."
+
+2. **`/friends`.** Show a friend's strategy, then press **Copy this view**.
+
+   > "Copying takes their view, not their position. The agent reprices it
+   > against the live book for my own budget, so my trade is mine and theirs is
+   > theirs. Nothing is pooled — that would make us a custodian of someone
+   > else's money, and we are not doing that."
+
+3. **A settled battle.** Open one that has resolved and let the overlay land.
+
+   > "And when the options expire, someone wins. Settled against the price
+   > Deribit actually published — nothing self-reported. Bragging rights only,
+   > nothing staked."
+
+**Have a settled battle ready before you record.** A running one only shows
+"Resolves 11 Sept", which is honest but undramatic, and you cannot make an
+option expire on cue. The overlay also fires **once per browser per battle** —
+so if you rehearse this beat, clear site data before the real take or Victory
+will not appear.
+
+### 4:20 — Custody
 
 Do not skip this and do not bury it. It is on screen already, in the footer.
 
