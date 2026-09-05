@@ -114,6 +114,60 @@ export const users = pgTable('users', {
   displayName: text('display_name'),
 });
 
+/**
+ * Who follows whom. One row per direction: `owner` follows `friend`.
+ *
+ * Deliberately not mutual-consent. Every strategy is already public in the
+ * feed, so a friends list is a filter over public data rather than a privacy
+ * boundary, and asking both sides to agree would be a consent prompt that
+ * protects nothing. If strategies ever become private, this becomes the wrong
+ * shape and the mutual version is the fix.
+ */
+export const friendships = pgTable(
+  'friendships',
+  {
+    owner: text('owner').notNull(),
+    friend: text('friend').notNull(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  },
+  (table) => [
+    index('friendships_owner_idx').on(table.owner),
+    index('friendships_friend_idx').on(table.friend),
+  ],
+);
+
+/**
+ * A friendly contest between two strategies.
+ *
+ * Nothing is staked. `winner` stays null until both options have expired, at
+ * which point the result is computed from the settlement price rather than from
+ * anything either player reports. Until then the interface compares the two
+ * positions on what they risk and what they pay if right, which is a comparison
+ * of conviction and is labelled as such.
+ */
+export const battles = pgTable(
+  'battles',
+  {
+    id: text('id').primaryKey(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    challenger: text('challenger').notNull(),
+    opponent: text('opponent').notNull(),
+    challengerStrategyId: text('challenger_strategy_id').notNull(),
+    opponentStrategyId: text('opponent_strategy_id').notNull(),
+    /** The later of the two expiries. Nothing resolves before this. */
+    resolvesAt: bigint('resolves_at', { mode: 'number' }).notNull(),
+    /** A handle, or 'draw'. Null while the battle is still running. */
+    winner: text('winner'),
+    resolvedAt: bigint('resolved_at', { mode: 'number' }),
+    /** The settlement prices the result was computed from, kept for audit. */
+    settlement: jsonb('settlement').$type<Record<string, number>>(),
+  },
+  (table) => [
+    index('battles_challenger_idx').on(table.challenger),
+    index('battles_opponent_idx').on(table.opponent),
+  ],
+);
+
 export type StrategyRow = typeof strategies.$inferSelect;
 export type NewStrategyRow = typeof strategies.$inferInsert;
 export type SignalRow = typeof signals.$inferSelect;

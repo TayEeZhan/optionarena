@@ -66,6 +66,7 @@ export class PostgresStore implements StrategyStore {
         txHash: strategy.txHash,
         live: strategy.live,
         error: strategy.error,
+        trader: strategy.trader,
       })
       // A retry must not create a second row, and must never blank out a hash
       // that has already been written.
@@ -103,5 +104,6 @@ function fromRow(row: StrategyRow): ExecutedStrategy {
     txHash: row.txHash,
     live: row.live,
     error: row.error,
+    trader: row.trader,
   };
 }

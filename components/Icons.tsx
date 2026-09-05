@@ -59,6 +59,17 @@ export function CopyIcon(props: IconProps) {
   );
 }
 
+export function FriendsIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
+      <circle cx="9" cy="7.5" r="3.5" />
+      <path d="M22 20v-1.5a4 4 0 0 0-3-3.87" />
+      <path d="M16.5 4.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 export function ChevronRightIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

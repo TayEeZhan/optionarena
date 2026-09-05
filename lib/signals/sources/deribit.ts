@@ -131,6 +131,30 @@ export async function fetchRecentTrades(
 }
 
 /** Every live option instrument on Deribit, used to check coverage. */
+/**
+ * The settlement price Deribit published for an expiry date.
+ *
+ * This is the number an expired option actually paid out against, not a spot
+ * quote taken afterwards, which is why a battle can be resolved honestly
+ * without OptionArena needing a price feed of its own. Returns null when the
+ * date has not settled yet, or is older than Deribit still publishes.
+ *
+ * @param currency ETH or BTC.
+ * @param expiry   expiry in seconds, as stored on a strategy.
+ */
+export async function fetchDeliveryPrice(
+  currency: 'ETH' | 'BTC',
+  expiry: number,
+): Promise<number | null> {
+  const wanted = new Date(expiry * 1000).toISOString().slice(0, 10);
+
+  const result = await call<{ data: { date: string; delivery_price: number }[] }>(
+    `get_delivery_prices?index_name=${currency.toLowerCase()}_usd&offset=0&count=90`,
+  );
+
+  return result.data.find((row) => row.date === wanted)?.delivery_price ?? null;
+}
+
 export async function fetchInstruments(currency: 'ETH' | 'BTC') {
   return call<
     { instrument_name: string; strike: number; expiration_timestamp: number; option_type: string }[]
