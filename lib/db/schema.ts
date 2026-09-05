@@ -106,13 +106,29 @@ export const signals = pgTable(
   ],
 );
 
-/** A trader. A wallet address or a demo session is enough for now. */
-export const users = pgTable('users', {
-  id: text('id').primaryKey(),
-  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
-  address: text('address'),
-  displayName: text('display_name'),
-});
+/**
+ * A person. The primary key is their handle, which is what every social table
+ * joins on, so an account signed in with Google still gets one.
+ *
+ * `provider` records how the identity was established, and the interface shows
+ * the difference: a Google account is verified, a typed handle is not.
+ */
+export const users = pgTable(
+  'users',
+  {
+    id: text('id').primaryKey(),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+    address: text('address'),
+    displayName: text('display_name'),
+    /** 'google' or 'handle'. Null on rows written before sign-in existed. */
+    provider: text('provider'),
+    /** Google's stable `sub`. Never the email, which a person can change. */
+    providerAccountId: text('provider_account_id'),
+    email: text('email'),
+    image: text('image'),
+  },
+  (table) => [index('users_provider_account_idx').on(table.providerAccountId)],
+);
 
 /**
  * Who follows whom. One row per direction: `owner` follows `friend`.
