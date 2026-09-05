@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { fetchBuyable, isUsdcCollateral } from './book';
+import { chainConfig } from './client';
 import { canSign, signerAddress, signingClient } from './client';
 import { formatUnits } from './decimals';
 
@@ -34,11 +35,43 @@ export interface WalletBalance {
  * three the answer is "we do not know", and a balance card must not guess at a
  * number.
  */
-/** The token the USDC side of the book settles in. */
-export interface CollateralDescriptor {
+/** A token, as the interface needs to name and read it. */
+export interface TokenDescriptor {
   address: string;
   decimals: number;
   symbol: string;
+}
+
+/** The token the USDC side of the book settles in, and what backs it. */
+export interface CollateralDescriptor extends TokenDescriptor {
+  /**
+   * The plain token behind the aToken, when there is one.
+   *
+   * A wallet holding USDC sees a balance in MetaMask and zero in this app,
+   * because the book settles in aBasUSDC and those are different tokens. The
+   * interface shows both so the two screens reconcile, which needs the
+   * underlying's own address and decimals.
+   */
+  underlying: TokenDescriptor | null;
+}
+
+/**
+ * The plain token an Aave aToken wraps.
+ *
+ * Derived from the naming the SDK's own config uses — aBasUSDC wraps USDC,
+ * aBasWETH wraps WETH — and looked up there rather than written down here, so
+ * no address or decimal is hardcoded. Null when there is no match, because a
+ * missing pairing is a display detail and not a failure.
+ */
+function underlyingOf(symbol: string): TokenDescriptor | null {
+  const plain = symbol.replace(/^aBas/, '');
+  if (plain === symbol) return null;
+
+  const tokens = chainConfig.tokens as
+    Record<string, { address: string; symbol: string; decimals: number } | undefined> | undefined;
+  const found = tokens?.[plain];
+
+  return found ? { address: found.address, decimals: found.decimals, symbol: found.symbol } : null;
 }
 
 /**
@@ -56,7 +89,7 @@ export async function usdcCollateral(): Promise<CollateralDescriptor | null> {
     if (!priced) return null;
 
     const { address, decimals, symbol } = priced.collateral;
-    return { address, decimals, symbol };
+    return { address, decimals, symbol, underlying: underlyingOf(symbol) };
   } catch {
     return null;
   }
