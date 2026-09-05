@@ -12,6 +12,14 @@ export interface LlmRequest {
   user: string;
   /** Keep responses short and deterministic. Strategy choice is not creative writing. */
   maxTokens?: number;
+  /**
+   * Text to put in the model's mouth, so the reply continues from it.
+   *
+   * Passing `{` is how the caller demands JSON and gets it: the model cannot
+   * open with a preamble because its turn has already started mid-object. The
+   * prefill is prepended back onto the reply, so callers see a whole document.
+   */
+  prefill?: string;
 }
 
 export interface Llm {
@@ -23,7 +31,7 @@ export interface Llm {
 function anthropic(apiKey: string): Llm {
   return {
     name: 'anthropic:claude-sonnet-5',
-    async complete({ system, user, maxTokens = 700 }) {
+    async complete({ system, user, maxTokens = 700, prefill }) {
       // Imported lazily so the package is only loaded when it is used.
       const { default: Anthropic } = await import('@anthropic-ai/sdk');
       const client = new Anthropic({ apiKey });
@@ -36,13 +44,23 @@ function anthropic(apiKey: string): Llm {
         model: 'claude-sonnet-5',
         max_tokens: maxTokens,
         system,
-        messages: [{ role: 'user', content: user }],
+        messages: prefill
+          ? [
+              { role: 'user', content: user },
+              { role: 'assistant', content: prefill },
+            ]
+          : [{ role: 'user', content: user }],
       });
 
-      return response.content
+      const text = response.content
         .map((block) => (block.type === 'text' ? block.text : ''))
         .filter(Boolean)
         .join('\n');
+
+      // The prefill is not echoed back by the API, so put it back. Without
+      // this the reply starts at the first field name and no parser can read
+      // it as an object.
+      return prefill ? prefill + text : text;
     },
   };
 }

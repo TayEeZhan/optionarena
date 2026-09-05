@@ -9,6 +9,7 @@ import {
 } from '@thetanuts-finance/thetanuts-client';
 import { readClient, CHAIN_ID, chainConfig } from './client';
 import { fromChain, fromUnits } from './decimals';
+import { fetchIndexPrices } from '../signals/sources/deribit';
 
 /**
  * Reads of the live OptionBook.
@@ -303,18 +304,16 @@ export async function fetchPulse(): Promise<MarketPulse> {
 
 /** Live spot prices, used to centre the payoff diagram. */
 export async function fetchSpot(): Promise<Record<string, number>> {
-  const client = readClient();
-  try {
-    const prices = await client.api.getMarketPrices();
-    const out: Record<string, number> = {};
-    for (const [key, value] of Object.entries(prices as Record<string, unknown>)) {
-      const n = Number(value);
-      if (Number.isFinite(n) && n > 0) out[key.toUpperCase().replace('/USD', '')] = n;
-    }
-    return out;
-  } catch {
-    return {};
-  }
+  // Not from the SDK. `client.api.getMarketPrices()` returns an envelope —
+  // `{ data: { price: 0n, change24h: 0, timestamp: null }, metadata: {...} }` —
+  // with one zero price and no asset dimension, so the old loop over its top
+  // level read `data` and `metadata` as numbers, got NaN for both, and returned
+  // an empty record every single time. Spot has therefore never been shown.
+  //
+  // Deribit publishes an index for both assets, needs no key, and already
+  // settles our expiries, so the price on a payoff chart is now the same feed
+  // that decides who won a battle. See `fetchIndexPrices`.
+  return fetchIndexPrices();
 }
 
 /** Human label for an instrument, used in the interface and the feed. */

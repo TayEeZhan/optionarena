@@ -89,7 +89,11 @@ export async function interpret(
 
   let raw: string;
   try {
-    raw = await llm.complete({ system, user, maxTokens: 1500 });
+    // `prefill: '{'` starts the model's turn inside the object, so it cannot
+    // preface the answer with a sentence. Production was falling back to the
+    // rule-based selector with "model returned an unusable answer", which is
+    // this branch: the call succeeded and the reply would not parse.
+    raw = await llm.complete({ system, user, maxTokens: 1500, prefill: '{' });
   } catch (error) {
     // A model outage must not take the product down. Fall back and say so.
     //
@@ -254,18 +258,61 @@ function chooseByRules(
 }
 
 /** Pull the first JSON object out of a model response. */
-function extractJson(text: string): unknown {
+export function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fenced ? fenced[1] : text;
-  const start = candidate.indexOf('{');
-  const end = candidate.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) return null;
 
-  try {
-    return JSON.parse(candidate.slice(start, end + 1));
-  } catch {
-    return null;
+  // Try the fenced block first, then the whole reply. A model that writes a
+  // sentence before the fence still gets read correctly.
+  for (const candidate of fenced ? [fenced[1], text] : [text]) {
+    const object = firstBalancedObject(candidate);
+    if (object !== null) return object;
   }
+
+  return null;
+}
+
+/**
+ * The first `{...}` in the text that is balanced and parses.
+ *
+ * Slicing from the first `{` to the last `}` was the previous approach, and it
+ * breaks on the two things a model actually does: writing a sentence that
+ * contains a brace before the answer, and adding a closing remark after it.
+ * Either one makes the slice span from prose to prose, `JSON.parse` throws,
+ * and a perfectly good contract choice is thrown away for the rule-based
+ * fallback. Scanning for a balanced object is quotation- and escape-aware, so
+ * a brace inside a string cannot end the object early.
+ */
+function firstBalancedObject(text: string): unknown {
+  for (let start = text.indexOf('{'); start !== -1; start = text.indexOf('{', start + 1)) {
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < text.length; i++) {
+      const char = text[i];
+
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = !inString;
+      } else if (!inString && char === '{') {
+        depth++;
+      } else if (!inString && char === '}') {
+        depth--;
+        if (depth === 0) {
+          try {
+            return JSON.parse(text.slice(start, i + 1));
+          } catch {
+            break; // Not valid JSON. Try the next opening brace.
+          }
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 function message(error: unknown): string {

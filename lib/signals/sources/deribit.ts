@@ -160,3 +160,38 @@ export async function fetchInstruments(currency: 'ETH' | 'BTC') {
     { instrument_name: string; strike: number; expiration_timestamp: number; option_type: string }[]
   >(`get_instruments?currency=${currency}&kind=option&expired=false`);
 }
+
+/**
+ * Current index price for ETH and BTC, in USD.
+ *
+ * This exists because the SDK's own price feed does not return one. Calling
+ * `client.api.getMarketPrices()` gives back `{ data: { price: 0n, change24h:
+ * 0, timestamp: null }, metadata: {...} }` — an envelope with a single zero
+ * price and no asset dimension at all, so there was never a number in there to
+ * read. Deribit publishes an index for both assets, needs no key, and is
+ * already the source we settle expiries against, so the spot shown on a payoff
+ * chart is now the same feed that decides who won a battle.
+ *
+ * A failure returns an empty record rather than throwing. Spot is used to draw
+ * a marker and to label a chart; every figure that matters — the premium, the
+ * maximum loss, the breakeven — comes from the order book and is unaffected.
+ */
+export async function fetchIndexPrices(): Promise<Record<string, number>> {
+  const currencies = ['ETH', 'BTC'] as const;
+
+  const results = await Promise.all(
+    currencies.map(async (currency) => {
+      try {
+        const result = await call<{ index_price: number }>(
+          `get_index_price?index_name=${currency.toLowerCase()}_usd`,
+        );
+        const price = Number(result.index_price);
+        return Number.isFinite(price) && price > 0 ? ([currency, price] as const) : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  return Object.fromEntries(results.filter((entry) => entry !== null));
+}
