@@ -42,8 +42,24 @@ export interface Battle {
   settlement: Record<string, number> | null;
 }
 
+/** A Google account, as much of it as we keep. */
+export interface GoogleIdentity {
+  sub: string;
+  email: string;
+  name: string | null;
+  picture: string | null;
+}
+
 export interface SocialStore {
   upsertUser(handle: string): Promise<void>;
+  /**
+   * Find or create the person behind a Google account, and return their handle.
+   *
+   * Matched on Google's `sub`, never the email, because an address can be
+   * changed or reassigned and `sub` cannot. `suggestion` is only a starting
+   * name: if it is taken by someone else, a free variant is chosen.
+   */
+  upsertGoogleUser(identity: GoogleIdentity, suggestion: string): Promise<string>;
   follow(owner: string, friend: string): Promise<void>;
   unfollow(owner: string, friend: string): Promise<void>;
   /** Handles this person follows. */
@@ -57,8 +73,18 @@ export interface SocialStore {
 
 // --- file backend -----------------------------------------------------------
 
+interface StoredUser {
+  id: string;
+  provider?: string;
+  providerAccountId?: string;
+  email?: string;
+  image?: string;
+  displayName?: string;
+}
+
 interface SocialFile {
-  users: string[];
+  /** Strings are rows written before sign-in existed. Read, never written. */
+  users: (string | StoredUser)[];
   follows: { owner: string; friend: string; createdAt: number }[];
   battles: Battle[];
 }
@@ -87,10 +113,34 @@ class FileSocialStore implements SocialStore {
 
   async upsertUser(handle: string): Promise<void> {
     const data = await this.read();
-    if (!data.users.includes(handle)) {
-      data.users.push(handle);
+    if (!data.users.some((row) => handleOf(row) === handle)) {
+      data.users.push({ id: handle, provider: 'handle' });
       await this.write(data);
     }
+  }
+
+  async upsertGoogleUser(identity: GoogleIdentity, suggestion: string): Promise<string> {
+    const data = await this.read();
+
+    const existing = data.users.find(
+      (row) => typeof row !== 'string' && row.providerAccountId === identity.sub,
+    );
+    if (existing) return handleOf(existing);
+
+    const taken = new Set(data.users.map(handleOf));
+    const handle = freeHandle(suggestion, taken);
+
+    data.users.push({
+      id: handle,
+      provider: 'google',
+      providerAccountId: identity.sub,
+      email: identity.email,
+      image: identity.picture ?? undefined,
+      displayName: identity.name ?? handle,
+    });
+    await this.write(data);
+
+    return handle;
   }
 
   async follow(owner: string, friend: string): Promise<void> {
@@ -148,8 +198,38 @@ class PostgresSocialStore implements SocialStore {
   async upsertUser(handle: string): Promise<void> {
     await this.db
       .insert(users)
-      .values({ id: handle, createdAt: Date.now(), displayName: handle })
+      .values({ id: handle, createdAt: Date.now(), displayName: handle, provider: 'handle' })
       .onConflictDoNothing({ target: users.id });
+  }
+
+  async upsertGoogleUser(identity: GoogleIdentity, suggestion: string): Promise<string> {
+    const existing = await this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.providerAccountId, identity.sub))
+      .limit(1);
+
+    if (existing[0]) return existing[0].id;
+
+    const taken = new Set(
+      (await this.db.select({ id: users.id }).from(users)).map((row) => row.id),
+    );
+    const handle = freeHandle(suggestion, taken);
+
+    await this.db
+      .insert(users)
+      .values({
+        id: handle,
+        createdAt: Date.now(),
+        displayName: identity.name ?? handle,
+        provider: 'google',
+        providerAccountId: identity.sub,
+        email: identity.email,
+        image: identity.picture,
+      })
+      .onConflictDoNothing({ target: users.id });
+
+    return handle;
   }
 
   async follow(owner: string, friend: string): Promise<void> {
@@ -218,6 +298,30 @@ function fromRow(row: typeof battles.$inferSelect): Battle {
     resolvedAt: row.resolvedAt,
     settlement: row.settlement ?? null,
   };
+}
+
+/** The handle on a stored user, whichever shape the row is in. */
+function handleOf(row: string | StoredUser): string {
+  return typeof row === 'string' ? row : row.id;
+}
+
+/**
+ * A handle nobody else holds.
+ *
+ * Two people called alex@ at different domains are different people, so the
+ * second one gets alex2 rather than being silently merged into the first.
+ */
+function freeHandle(suggestion: string, taken: Set<string>): string {
+  if (!taken.has(suggestion)) return suggestion;
+
+  for (let n = 2; n < 1000; n += 1) {
+    const suffix = String(n);
+    const candidate = `${suggestion.slice(0, 20 - suffix.length)}${suffix}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+
+  // Effectively unreachable, and still better than returning someone else's.
+  return `${suggestion.slice(0, 13)}${Date.now().toString(36).slice(-6)}`;
 }
 
 let socialStore: SocialStore | null = null;
