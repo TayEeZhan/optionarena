@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { useMode } from './ModeProvider';
 import { PayoffChart } from './PayoffChart';
 import { ProofPanel } from './ProofPanel';
+import { WalletTrade } from './WalletTrade';
+import { useWallet } from './WalletProvider';
 import type { InterpretResponse, ExecuteResponse } from '@/lib/wire';
 import type { RiskLevel } from '@/lib/agent/schema';
 
@@ -153,6 +155,7 @@ export function Flow({
         <PreviewStep
           result={result}
           mode={mode}
+          budget={budget}
           pending={pending}
           onBack={() => setStep(0)}
           onExecute={executeStrategy}
@@ -349,18 +352,21 @@ function DescribeStep({
 function PreviewStep({
   result,
   mode,
+  budget,
   pending,
   onBack,
   onExecute,
 }: {
   result: InterpretResponse;
   mode: 'demo' | 'live';
+  budget: number;
   pending: boolean;
   onBack: () => void;
   onExecute: () => void;
 }) {
   const { quote } = result;
   const live = mode === 'live';
+  const { account } = useWallet();
 
   return (
     <div className="space-y-4">
@@ -456,6 +462,19 @@ function PreviewStep({
           </ul>
         )}
       </div>
+
+      {/*
+       * A connected wallet gets its own path, above the server one. Nothing
+       * about the existing flow changes: the server wallet still backs demo
+       * mode, and someone with no wallet sees exactly what they saw before.
+       */}
+      {account && (
+        <WalletTrade
+          instrumentId={quote.instrumentId}
+          budget={budget}
+          maxLossDisplay={quote.maxLossDisplay}
+        />
+      )}
 
       {/* One primary action per screen. Live is drawn in the loss colour, not
           the accent, so the button that spends money never looks like brand. */}

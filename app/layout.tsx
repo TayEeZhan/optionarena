@@ -6,6 +6,7 @@ import './globals.css';
 import { Header, TabBar } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { ModeProvider } from '@/components/ModeProvider';
+import { WalletProvider } from '@/components/WalletProvider';
 import { canSign } from '@/lib/thetanuts/client';
 
 /**
@@ -53,13 +54,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
       <body className="min-h-screen">
         <ModeProvider liveAvailable={liveAvailable}>
-          <Header />
-          {/* The bottom padding clears the fixed tab bar on phones. */}
-          <main className="mx-auto max-w-5xl px-5 pt-7 pb-32 md:pb-16">
-            {children}
-            <Footer />
-          </main>
-          <TabBar />
+          <WalletProvider>
+            <Header />
+            {/* The bottom padding clears the fixed tab bar on phones. */}
+            <main className="mx-auto max-w-5xl px-5 pt-7 pb-32 md:pb-16">
+              {children}
+              <Footer />
+            </main>
+            <TabBar />
+          </WalletProvider>
         </ModeProvider>
         <Toaster
           theme="dark"
