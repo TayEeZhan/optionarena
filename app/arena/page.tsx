@@ -6,6 +6,11 @@ import { getHandle } from '@/lib/auth/session';
 import { getSocialStore } from '@/lib/social/store';
 import { getStore } from '@/lib/db/store';
 import type { ExecutedStrategy } from '@/lib/agent/schema';
+import { randomUUID } from 'node:crypto';
+import { redirect } from 'next/navigation';
+import { callRecord, resolveCallIfDue } from '@/lib/social/calls';
+import type { CallSide } from '@/lib/db/schema';
+import type { RankedSignal } from '@/lib/signals/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +25,57 @@ export default async function ArenaPage() {
   // above is discovery; this is where you take someone on.
   const me = await getHandle();
   const following = me ? await getSocialStore().following(me) : [];
+
+  // The call this person has already made on exactly this pairing, if any.
+  const pairKey = left && right ? `${left.id}|${right.id}` : null;
+  const existing = me && pairKey ? await getSocialStore().callFor(me, pairKey) : null;
+  const outcome = existing ? await resolveCallIfDue(existing) : null;
+  const record = me ? callRecord(await getSocialStore().callsFor(me)) : null;
+
+  const resolvesOn =
+    left && right
+      ? new Date(Math.max(left.expiry, right.expiry) * 1000).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          timeZone: 'UTC',
+        })
+      : '';
   const challengeable = following.length
     ? (await getStore().list(200))
         .filter((strategy) => strategy.trader && following.includes(strategy.trader))
         .slice(0, 4)
     : [];
+
+  async function call(formData: FormData) {
+    'use server';
+
+    const handle = await getHandle();
+    if (!handle) redirect('/join');
+
+    const picked = String(formData.get('picked'));
+    const key = String(formData.get('pairKey'));
+    const leftSide = JSON.parse(String(formData.get('left'))) as CallSide;
+    const rightSide = JSON.parse(String(formData.get('right'))) as CallSide;
+    if (picked !== 'left' && picked !== 'right') redirect('/arena');
+
+    const already = await getSocialStore().callFor(handle, key);
+
+    await getSocialStore().saveCall({
+      id: already?.id ?? randomUUID(),
+      handle,
+      pairKey: key,
+      createdAt: already?.createdAt ?? Date.now(),
+      picked,
+      left: leftSide,
+      right: rightSide,
+      resolvesAt: Math.max(leftSide.expiry, rightSide.expiry),
+      winner: null,
+      resolvedAt: null,
+      settlement: null,
+    });
+
+    redirect('/arena');
+  }
 
   return (
     <div className="mx-auto max-w-xl">
@@ -55,11 +106,85 @@ export default async function ArenaPage() {
             <TradeSide signal={right} align="right" />
           </div>
 
-          <div className="mt-7 border-t border-[var(--color-hairline)] pt-5 text-center">
-            <p className="eyebrow">Current ranking snapshot</p>
-            <p className="mt-2 text-[0.8rem] text-[var(--color-ink-muted)]">
-              Ranked by performance from entry. This is not a timed wager or a prediction.
-            </p>
+          <div className="mt-7 border-t border-[var(--color-hairline)] pt-6">
+            {outcome?.call.winner ? (
+              <div className="text-center">
+                <p className="eyebrow">Result</p>
+                <p className="display mt-2 text-[1.9rem] font-extrabold">
+                  {outcome.call.winner === 'draw'
+                    ? 'A draw.'
+                    : outcome.correct
+                      ? 'You called it.'
+                      : 'You called it wrong.'}
+                </p>
+                <p className="mt-2 text-[0.78rem] leading-relaxed text-[var(--color-ink-muted)]">
+                  {outcome.returns && (
+                    <>
+                      Left {(outcome.returns.left! * 100).toFixed(0)}%, right{' '}
+                      {(outcome.returns.right! * 100).toFixed(0)}% at settlement.{' '}
+                    </>
+                  )}
+                  Settled against the price Deribit published. Nothing was staked.
+                </p>
+              </div>
+            ) : existing ? (
+              <div className="text-center">
+                <p className="eyebrow">Your call</p>
+                <p className="mt-2 text-[1rem] font-semibold">
+                  You picked the{' '}
+                  {(existing.picked === 'left' ? left : right).strike.toLocaleString('en-US')}{' '}
+                  {(existing.picked === 'left' ? left : right).isCall ? 'call' : 'put'}
+                </p>
+                <p className="mt-2 text-[0.78rem] leading-relaxed text-[var(--color-ink-muted)]">
+                  {outcome?.note ??
+                    `Resolves ${resolvesOn}. Nothing is staked — this is a call, not a bet.`}
+                </p>
+              </div>
+            ) : me ? (
+              <>
+                <p className="eyebrow text-center">Which one does better by expiry?</p>
+                <form action={call} className="mt-4 grid grid-cols-2 gap-3">
+                  <input type="hidden" name="pairKey" value={pairKey ?? ''} />
+                  <input type="hidden" name="left" value={JSON.stringify(sideOf(left))} />
+                  <input type="hidden" name="right" value={JSON.stringify(sideOf(right))} />
+                  <button
+                    name="picked"
+                    value="left"
+                    type="submit"
+                    className="ghost px-3 py-3 text-[0.82rem] leading-snug"
+                  >
+                    Call the {left.strike.toLocaleString('en-US')} {left.isCall ? 'call' : 'put'}
+                  </button>
+                  <button
+                    name="picked"
+                    value="right"
+                    type="submit"
+                    className="ghost px-3 py-3 text-[0.82rem] leading-snug"
+                  >
+                    Call the {right.strike.toLocaleString('en-US')} {right.isCall ? 'call' : 'put'}
+                  </button>
+                </form>
+                <p className="mt-3 text-center text-[0.72rem] leading-relaxed text-[var(--color-ink-faint)]">
+                  Free, and nothing is staked. It resolves {resolvesOn} against the settlement price
+                  Deribit publishes — not against anything we report.
+                  {record && record.right + record.wrong > 0 && (
+                    <>
+                      {' '}
+                      Your record so far: {record.right} right, {record.wrong} wrong.
+                    </>
+                  )}
+                </p>
+              </>
+            ) : (
+              <div className="text-center">
+                <p className="text-[0.85rem] text-[var(--color-ink-muted)]">
+                  Sign in to call which one does better.
+                </p>
+                <Link href="/join" className="cta mt-4 inline-flex px-5 py-2.5 text-[0.85rem]">
+                  Sign in
+                </Link>
+              </div>
+            )}
           </div>
 
           <Link
@@ -137,6 +262,25 @@ export default async function ArenaPage() {
       )}
     </div>
   );
+}
+
+/**
+ * Freeze one side of a matchup into a call.
+ *
+ * The board rotates within minutes, so a call that merely pointed at signal ids
+ * would be unresolvable almost immediately. Everything settlement needs is
+ * copied in here instead, and the call never consults the board again.
+ */
+function sideOf(signal: RankedSignal): CallSide {
+  return {
+    signalId: signal.id,
+    label: instrumentLabel(signal),
+    underlying: signal.underlying,
+    isCall: signal.isCall,
+    strike: signal.strike,
+    expiry: signal.expiry,
+    price: signal.price,
+  };
 }
 
 function ChallengeRow({ strategy }: { strategy: ExecutedStrategy }) {

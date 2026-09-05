@@ -7,7 +7,7 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { and, eq, or } from 'drizzle-orm';
 
-import { battles, friendships, users } from '../db/schema';
+import { battles, calls, friendships, users, type CallSide } from '../db/schema';
 
 /**
  * Friends and battles.
@@ -50,6 +50,23 @@ export interface GoogleIdentity {
   picture: string | null;
 }
 
+/** A call on an arena matchup. Both sides are frozen at the moment it was made. */
+export interface Call {
+  id: string;
+  handle: string;
+  pairKey: string;
+  createdAt: number;
+  picked: 'left' | 'right';
+  left: CallSide;
+  right: CallSide;
+  /** The later of the two expiries, in seconds. */
+  resolvesAt: number;
+  /** 'left', 'right' or 'draw'. Null while the call is still open. */
+  winner: string | null;
+  resolvedAt: number | null;
+  settlement: Record<string, number> | null;
+}
+
 export interface SocialStore {
   upsertUser(handle: string): Promise<void>;
   /**
@@ -69,6 +86,11 @@ export interface SocialStore {
   battlesFor(handle: string): Promise<Battle[]>;
   getBattle(id: string): Promise<Battle | null>;
   saveBattle(battle: Battle): Promise<void>;
+  /** Create or replace this person's call on one matchup pairing. */
+  saveCall(call: Call): Promise<void>;
+  callFor(handle: string, pairKey: string): Promise<Call | null>;
+  /** Every call this person has made, newest first. */
+  callsFor(handle: string): Promise<Call[]>;
 }
 
 // --- file backend -----------------------------------------------------------
@@ -87,13 +109,14 @@ interface SocialFile {
   users: (string | StoredUser)[];
   follows: { owner: string; friend: string; createdAt: number }[];
   battles: Battle[];
+  calls: Call[];
 }
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const DATA_FILE = path.join(DATA_DIR, 'social.json');
 
 function empty(): SocialFile {
-  return { users: [], follows: [], battles: [] };
+  return { users: [], follows: [], battles: [], calls: [] };
 }
 
 class FileSocialStore implements SocialStore {
@@ -184,6 +207,29 @@ class FileSocialStore implements SocialStore {
     else data.battles[index] = battle;
     await this.write(data);
   }
+
+  async saveCall(call: Call): Promise<void> {
+    const data = await this.read();
+    // One call per person per pairing: re-picking replaces rather than stacks.
+    const index = data.calls.findIndex(
+      (row) => row.id === call.id || (row.handle === call.handle && row.pairKey === call.pairKey),
+    );
+    if (index === -1) data.calls.push(call);
+    else data.calls[index] = call;
+    await this.write(data);
+  }
+
+  async callFor(handle: string, pairKey: string): Promise<Call | null> {
+    const data = await this.read();
+    return data.calls.find((row) => row.handle === handle && row.pairKey === pairKey) ?? null;
+  }
+
+  async callsFor(handle: string): Promise<Call[]> {
+    const data = await this.read();
+    return data.calls
+      .filter((row) => row.handle === handle)
+      .sort((a, b) => b.createdAt - a.createdAt);
+  }
 }
 
 // --- postgres backend -------------------------------------------------------
@@ -192,7 +238,7 @@ class PostgresSocialStore implements SocialStore {
   private db;
 
   constructor(connectionString: string) {
-    this.db = drizzle(neon(connectionString), { schema: { friendships, battles, users } });
+    this.db = drizzle(neon(connectionString), { schema: { friendships, battles, users, calls } });
   }
 
   async upsertUser(handle: string): Promise<void> {
@@ -283,6 +329,53 @@ class PostgresSocialStore implements SocialStore {
         },
       });
   }
+
+  async saveCall(call: Call): Promise<void> {
+    // One call per person per pairing. The id is derived from both, so a
+    // re-pick collides with itself and updates rather than stacking.
+    await this.db
+      .insert(calls)
+      .values(call)
+      .onConflictDoUpdate({
+        target: calls.id,
+        set: {
+          picked: call.picked,
+          winner: call.winner,
+          resolvedAt: call.resolvedAt,
+          settlement: call.settlement,
+        },
+      });
+  }
+
+  async callFor(handle: string, pairKey: string): Promise<Call | null> {
+    const rows = await this.db
+      .select()
+      .from(calls)
+      .where(and(eq(calls.handle, handle), eq(calls.pairKey, pairKey)))
+      .limit(1);
+    return rows[0] ? callFromRow(rows[0]) : null;
+  }
+
+  async callsFor(handle: string): Promise<Call[]> {
+    const rows = await this.db.select().from(calls).where(eq(calls.handle, handle));
+    return rows.map(callFromRow).sort((a, b) => b.createdAt - a.createdAt);
+  }
+}
+
+function callFromRow(row: typeof calls.$inferSelect): Call {
+  return {
+    id: row.id,
+    handle: row.handle,
+    pairKey: row.pairKey,
+    createdAt: row.createdAt,
+    picked: row.picked as 'left' | 'right',
+    left: row.left,
+    right: row.right,
+    resolvesAt: row.resolvesAt,
+    winner: row.winner,
+    resolvedAt: row.resolvedAt,
+    settlement: row.settlement ?? null,
+  };
 }
 
 function fromRow(row: typeof battles.$inferSelect): Battle {
