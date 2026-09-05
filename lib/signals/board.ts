@@ -126,6 +126,19 @@ function previewFor(criterion: WinningCriterion, limit: number): RankedSignal[] 
   });
 }
 
+/**
+ * The mapped signal a link asked for, or the page's own default.
+ *
+ * Signals rotate as new trades arrive, so an id from a link opened a minute ago
+ * may already be gone from the board. That is ordinary, not an error: fall back
+ * to the featured pick rather than showing an empty page. Callers that care can
+ * compare the returned id against the one they asked for.
+ */
+export function findMapped(board: BoardSnapshot, id?: string): MappedSignal | undefined {
+  const requested = id ? board.mapped.find((mapped) => mapped.signal.id === id) : undefined;
+  return requested ?? board.mapped.find((mapped) => mapped.instrument) ?? board.mapped[0];
+}
+
 export async function getBoardSnapshot(
   criterion: WinningCriterion = 'inProfit',
   limit = 4,

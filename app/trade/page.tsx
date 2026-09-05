@@ -5,7 +5,14 @@ import { chainConfig } from '@/lib/thetanuts/client';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TradePage() {
+/** `view` and `budget` let /copy hand a sourced market view into step 01. */
+export default async function TradePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string; budget?: string }>;
+}) {
+  const params = await searchParams;
+  const budget = Number(params.budget);
   let pulse = null;
   let pulseError: string | null = null;
 
@@ -27,7 +34,10 @@ export default async function TradePage() {
         </p>
       </div>
 
-      <Flow />
+      <Flow
+        initialView={params.view ?? ''}
+        initialBudget={Number.isFinite(budget) && budget > 0 ? budget : 5}
+      />
 
       <section className="space-y-4">
         <div className="card p-6">

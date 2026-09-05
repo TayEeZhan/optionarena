@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { ChevronRightIcon, ShieldIcon } from '@/components/Icons';
 import { AssetMark, instrumentLabel, MappingBadge, signalValue } from '@/components/SignalCard';
-import { getBoardSnapshot } from '@/lib/signals/board';
+import { findMapped, getBoardSnapshot } from '@/lib/signals/board';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CopyPage() {
   const board = await getBoardSnapshot('inProfit', 20);
-  const featured = board.mapped.find((signal) => signal.instrument) ?? board.mapped[0];
+  const featured = findMapped(board);
 
   return (
     <div className="mx-auto max-w-xl">
@@ -58,7 +58,7 @@ export default async function CopyPage() {
           </div>
 
           <Link
-            href="/copy/strategy"
+            href={`/copy/strategy?id=${encodeURIComponent(featured.signal.id)}`}
             className="cta mt-6 flex min-h-14 items-center justify-center gap-2 px-5 text-[0.95rem]"
           >
             View strategy

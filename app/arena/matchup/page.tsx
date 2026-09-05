@@ -5,11 +5,25 @@ import { getBoardSnapshot, pickMatchup } from '@/lib/signals/board';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MatchupPage() {
+export default async function MatchupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ left?: string; right?: string }>;
+}) {
+  const params = await searchParams;
+
   // A wider pool than the two shown, so the matchup can find a second
   // contract that is genuinely different. See pickMatchup.
   const board = await getBoardSnapshot('inProfit', 12);
-  const matchup = pickMatchup(board.signals);
+
+  // Show the pair the arena linked to. Both have to still be on the board for
+  // that to mean anything, so if either has rotated off, fall back to picking a
+  // fresh matchup rather than pairing a stale trade against a current one.
+  const asked = [params.left, params.right].map((id) =>
+    id ? board.signals.find((signal) => signal.id === id) : undefined,
+  );
+  const matchup =
+    asked[0] && asked[1] ? ([asked[0], asked[1]] as const) : pickMatchup(board.signals);
   const [left, right] = matchup ?? [null, null];
 
   return (

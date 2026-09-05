@@ -23,12 +23,23 @@ const RISKS: { value: RiskLevel; label: string; hint: string }[] = [
   { value: 'aggressive', label: 'Punchy', hint: 'Further out, pays more if right' },
 ];
 
-export function Flow() {
+/**
+ * `initialView` seeds step 01 so a sourced trade can hand its market view over
+ * from /copy. It is a starting sentence, not a decision: the agent still reads
+ * it against the live book and the user still approves the maximum loss.
+ */
+export function Flow({
+  initialView = '',
+  initialBudget = 5,
+}: {
+  initialView?: string;
+  initialBudget?: number;
+}) {
   const { mode } = useMode();
 
   const [step, setStep] = useState(0);
-  const [view, setView] = useState('');
-  const [budget, setBudget] = useState(5);
+  const [view, setView] = useState(initialView);
+  const [budget, setBudget] = useState(initialBudget);
   const [risk, setRisk] = useState<RiskLevel>('balanced');
 
   const [pending, setPending] = useState(false);

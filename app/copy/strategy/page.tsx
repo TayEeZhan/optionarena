@@ -1,13 +1,36 @@
 import Link from 'next/link';
 import { ChevronRightIcon, ShieldIcon } from '@/components/Icons';
-import { AssetMark, instrumentLabel, MappingBadge, signalValue } from '@/components/SignalCard';
-import { getBoardSnapshot } from '@/lib/signals/board';
+import {
+  AssetMark,
+  instrumentLabel,
+  MappingBadge,
+  signalValue,
+  viewSentence,
+} from '@/components/SignalCard';
+import { findMapped, getBoardSnapshot } from '@/lib/signals/board';
+import {
+  WinningCriterion as WinningCriterionSchema,
+  type WinningCriterion,
+} from '@/lib/signals/types';
 
 export const dynamic = 'force-dynamic';
 
-export default async function StrategyPage() {
-  const board = await getBoardSnapshot('inProfit', 20);
-  const mapped = board.mapped.find((signal) => signal.instrument) ?? board.mapped[0];
+export default async function StrategyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ id?: string; criterion?: string }>;
+}) {
+  const params = await searchParams;
+  const parsed = WinningCriterionSchema.safeParse(params.criterion);
+  const criterion: WinningCriterion = parsed.success ? parsed.data : 'inProfit';
+
+  const board = await getBoardSnapshot(criterion, 20);
+  const mapped = findMapped(board, params.id);
+
+  // The board moves as new trades arrive. If the trade the user clicked has
+  // rotated off it, show the featured one but say so, rather than quietly
+  // swapping a different trade under the same heading.
+  const rotatedAway = Boolean(params.id && mapped && mapped.signal.id !== params.id);
 
   return (
     <div className="mx-auto max-w-xl">
@@ -22,6 +45,13 @@ export default async function StrategyPage() {
         Review the sourced trade before OptionArena builds a Thetanuts quote.
       </p>
 
+      {rotatedAway && (
+        <p className="mt-4 rounded-2xl border border-[var(--color-hairline)] bg-[var(--color-surface)] px-4 py-3 text-[0.78rem] leading-relaxed text-[var(--color-ink-muted)]">
+          That trade has rolled off the board since you opened it, so this is the top ranked one
+          instead.
+        </p>
+      )}
+
       {mapped && (
         <section className="panel accent-ring mt-7 p-6 sm:p-7">
           <div className="flex items-start gap-4">
@@ -29,7 +59,7 @@ export default async function StrategyPage() {
             <div className="min-w-0 flex-1">
               <h2 className="text-[1.3rem] font-bold">{instrumentLabel(mapped.signal)}</h2>
               <p className="data mt-2 text-[1.6rem] font-semibold text-[var(--color-gain)]">
-                {signalValue(mapped.signal, 'inProfit')}
+                {signalValue(mapped.signal, criterion)}
               </p>
             </div>
             <MappingBadge mapped={mapped} />
@@ -61,16 +91,26 @@ export default async function StrategyPage() {
         </section>
       )}
 
-      <Link
-        href="/trade"
-        className="cta mt-5 flex min-h-14 items-center justify-center gap-2 px-5 text-[0.95rem]"
-      >
-        Build my trade
-        <ChevronRightIcon className="h-4 w-4" />
-      </Link>
-      <p className="mt-3 text-center text-[0.78rem] text-[var(--color-ink-faint)]">
-        You still review the live quote and maximum loss. Nothing is copied automatically.
-      </p>
+      {mapped ? (
+        <>
+          <Link
+            href={`/trade?view=${encodeURIComponent(viewSentence(mapped.signal))}`}
+            className="cta mt-5 flex min-h-14 items-center justify-center gap-2 px-5 text-[0.95rem]"
+          >
+            Build my trade
+            <ChevronRightIcon className="h-4 w-4" />
+          </Link>
+          <p className="mt-3 text-center text-[0.78rem] text-[var(--color-ink-faint)]">
+            This fills in the view, not the contract. The agent reads it against the live Thetanuts
+            book and may pick a different strike, and you approve the quote and the maximum loss
+            before anything is signed. Nothing is copied automatically.
+          </p>
+        </>
+      ) : (
+        <p className="panel mt-7 p-8 text-center text-[0.9rem] text-[var(--color-ink-muted)]">
+          No ranked trade is available right now.
+        </p>
+      )}
     </div>
   );
 }
