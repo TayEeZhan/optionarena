@@ -19,6 +19,7 @@ Do all of these. Two of them have caught a broken deployment already.
 | 3 | The book has contracts | `npm run book` | a non-zero USDC-priced count |
 | 4 | Storage is Postgres | open `/`, read the footer strip | `STORAGE: POSTGRES` |
 | 5 | Tests are green | `npm run check` | typecheck, lint, tests all pass |
+| 6 | **The copy loop closes** | `/leaderboard`, click row 3 | The strategy page shows **row 3's** trade, and "Build my trade" arrives with the box filled |
 
 ```bash
 for r in / /trade /arena /leaderboard /copy /feed /profile; do printf '%s -> ' "$r"; curl -s -o /dev/null -w '%{http_code}\n' "https://optionarena-uoqy.vercel.app$r"; done
@@ -83,9 +84,9 @@ is cheap.
 | 0:50–1:20 | Describe a view in plain language | `/` step 01 |
 | 1:20–2:10 | **The agent's reading, and the maximum loss** | step 02 |
 | 2:10–2:50 | Prove it — Version A or B | step 03 |
-| 2:50–3:30 | Where the signals come from | `/arena`, `/copy` |
-| 3:30–3:50 | Custody, said plainly | `/profile` or the footer |
-| 3:50–4:20 | Close | `/` |
+| 2:50–3:45 | **Copy a sourced trade, end to end** | `/leaderboard` → `/copy/strategy` → `/trade` |
+| 3:45–4:00 | Custody, said plainly | `/profile` or the footer |
+| 4:00–4:30 | Close | `/` |
 
 Rehearse out loud with a timer. The beat that always overruns is 1:20–2:10.
 
@@ -154,19 +155,44 @@ and say the Version B sentence from §2. Then say:
 > "The number you are looking at is not a mock. It is what the live path would
 > have spent, at the price the book is quoting right now."
 
-### 2:50 — Where the signals come from
+### 2:50 — Copy a sourced trade, end to end
 
-Open `/arena`, then `/copy`. Both are live and both carry a plain-language
-reason each trade ranked.
+**This is a click-through, not a tour.** Do not narrate over static screens —
+the point is that the loop closes, so let it close on camera.
+
+Open `/leaderboard`. Say where the ranking comes from while it is on screen:
 
 > "The name says arena, so here is the honest version of it. Thetanuts' own book
 > is too thin to have anyone worth copying yet — their team told us that
 > directly. So we rank real flow from Deribit, where the depth is, and map it
-> onto contracts that actually exist on Base. Every one of them says why it
-> ranked. We rank trades, never traders."
+> onto contracts that actually exist on Base. Every row says why it ranked. We
+> rank trades, never traders."
 
 That last line matters. Deribit's public trades carry no identity, so a track
 record is not derivable — and claiming one would be a lie. See `decisions.md` §11.
+
+Then do the three clicks, without hurrying:
+
+1. **Click a row that is not the top one.** Row 3 is a good choice — it proves
+   the page opens the trade you picked. Point at the **Exact match** badge:
+
+   > "That is a real Deribit trade, and the strike and expiry exist on Thetanuts.
+   > The badge says whether it is an exact match or a near one, and a near one
+   > lists every difference. It never substitutes silently."
+
+2. **Click "Build my trade."** Let the viewer see the box arrive already filled:
+
+   > "It carries the view across, not the contract. The agent reads it against
+   > the live book and may well pick a different strike — so you approve the
+   > quote and the maximum loss, same as any other trade. Nothing is copied
+   > automatically."
+
+3. **Click "Interpret my view."** Land on a real quote for that expiry.
+
+> "That is the whole loop. Real flow from a venue with depth, ranked with a
+> reason, mapped onto a contract that exists on Base, priced from the live book."
+
+If a beat has to be cut for time, cut something else. This one is the product.
 
 ### 3:30 — Custody
 
@@ -190,6 +216,7 @@ Do not skip this and do not bury it. It is on screen already, in the footer.
 | The interpret step hangs | Wait five seconds, then cut. Do not narrate the wait |
 | `Chosen by rules …` appears unexpectedly | Keep going. Say "the agent is unreachable right now, so the deterministic selector ran — the product is built to degrade rather than fail." Then fix it and re-record that beat |
 | The book returns nothing | Stop. There is no honest demo without a live book. Re-run the pre-flight |
+| "That trade has rolled off the board" appears | Expected, not a bug — Deribit flow rotates and the trade you opened is gone. Either keep going and say so, or go back and pick a fresher row. Do **not** apologise for it; it is the page being honest rather than swapping a different trade in silently |
 | A live fill hangs | Cut to the backup recording. PRD §4.4 requires one |
 | You fluff a line | Stop, breathe, restart the beat. Do not fix it in narration |
 
