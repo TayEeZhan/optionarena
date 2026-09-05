@@ -2,39 +2,54 @@ import Link from 'next/link';
 import { AutoRefresh } from '@/components/AutoRefresh';
 import { ArrowUpRightIcon, ChevronRightIcon, CopyIcon, TradeIcon } from '@/components/Icons';
 import { AssetMark, instrumentLabel, signalValue } from '@/components/SignalCard';
+import { BalanceCard } from '@/components/BalanceCard';
 import { getBoardSnapshot } from '@/lib/signals/board';
 import { fetchPulse } from '@/lib/thetanuts/book';
+import { walletBalance } from '@/lib/thetanuts/balance';
+import { getStore } from '@/lib/db/store';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * What a demo account starts with.
+ *
+ * Named rather than inlined, because the figure on screen is now derived from
+ * it and a magic literal in the markup is how it drifted out of sync with
+ * reality in the first place.
+ */
+const DEMO_ALLOWANCE = 10_000;
+
 export default async function HomePage() {
-  const [board, pulse] = await Promise.all([
+  const [board, pulse, wallet, strategies] = await Promise.all([
     getBoardSnapshot('inProfit', 1),
     fetchPulse().catch(() => null),
+    walletBalance(),
+    getStore()
+      .list(200)
+      .catch(() => []),
   ]);
   const featured = board.signals[0];
+
+  // The demo figure moves with what was actually built. It used to be a
+  // constant printed as a balance, so ten strategies later it still read
+  // 10,000.00 — a number that never changes is not a balance.
+  const spent = strategies
+    .filter((row) => !row.txHash)
+    .reduce((total, row) => total + (Number(row.premium) || 0), 0);
+  const demoLeft = Math.max(0, DEMO_ALLOWANCE - spent);
 
   return (
     <div className="mx-auto max-w-xl space-y-8">
       <AutoRefresh seconds={60} />
 
-      <section className="panel p-6 sm:p-8">
-        <div className="flex items-center justify-between">
-          <p className="eyebrow">Demo balance</p>
-          <span className="pill px-3 py-1 text-[0.7rem] font-semibold text-[var(--color-accent)]">
-            DEMO
-          </span>
-        </div>
-        <p className="data mt-6 flex flex-wrap items-baseline gap-2">
-          <span className="text-[2.8rem] leading-none font-semibold tracking-[-0.05em] sm:text-[3.4rem]">
-            10,000.00
-          </span>
-          <span className="text-[0.95rem] text-[var(--color-ink-muted)]">USDC</span>
-        </p>
-        <p className="mt-3 text-[0.82rem] text-[var(--color-ink-faint)]">
-          Simulated balance. Real prices, no signature.
-        </p>
-      </section>
+      <BalanceCard
+        demoDisplay={demoLeft.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
+        demoSpent={spent > 0}
+        wallet={wallet}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <Link
