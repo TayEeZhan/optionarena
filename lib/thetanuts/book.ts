@@ -290,6 +290,24 @@ export interface MarketPulse {
   buyableOrders: number;
   /** Of the buyable orders, how many are paid for in USDC. */
   usdcBuyable: number;
+  /**
+   * Buyable orders the aToken overflow does not block.
+   *
+   * Counted with the same `isAToken` the executor gates on, so the number the
+   * interface shows and the orders `executeStrategy` will accept cannot drift
+   * apart. Measured on 6 Sep 2026: 34 of 124 buyable orders, every one a BTC
+   * call paid in cbBTC.
+   */
+  unblocked: number;
+  /**
+   * Of the USDC-priced orders, how many the overflow does not block.
+   *
+   * Separate from `unblocked` because the two have never overlapped: on
+   * 6 Sep 2026 all 64 USDC-priced orders were aBasUSDC and all 34 unblocked
+   * ones were cbBTC BTC calls. The interface needs to state that without
+   * assuming it stays true, so it counts rather than asserts.
+   */
+  usdcUnblocked: number;
   byUnderlying: { underlying: string; buyable: number; total: number }[];
   nextExpiry: number | null;
   indexerLagBlocks: number | null;
@@ -308,6 +326,8 @@ export async function fetchPulse(): Promise<MarketPulse> {
     totalOrders: book.length,
     buyableOrders: buyable.length,
     usdcBuyable: buyable.filter(isUsdcCollateral).length,
+    unblocked: buyable.filter((i) => !isAToken(i)).length,
+    usdcUnblocked: buyable.filter((i) => isUsdcCollateral(i) && !isAToken(i)).length,
     byUnderlying: underlyings
       .map((u) => ({
         underlying: u,

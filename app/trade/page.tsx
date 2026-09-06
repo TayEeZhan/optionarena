@@ -63,8 +63,21 @@ export default async function TradePage({
                 {pulse.usdcBuyable}
               </p>
               <p className="mt-2 text-[0.85rem] leading-relaxed text-[var(--color-ink-muted)]">
-                contracts priced in USDC you can buy right now, of {pulse.buyableOrders} buyable and{' '}
-                {pulse.totalOrders} resting
+                contracts priced in USDC, of {pulse.buyableOrders} buyable and {pulse.totalOrders}{' '}
+                resting
+              </p>
+              {/*
+               * This used to read "you can buy right now", which was not true of
+               * a single one of them. Every USDC-priced order on Base is
+               * collateralised in aBasUSDC, and `executeStrategy` refuses all of
+               * them because the OptionBook overflows on Aave aTokens. Naming
+               * the blocker beside the number means the panel and the refusal
+               * you would hit at step 03 tell the same story.
+               */}
+              <p className="mt-3 text-[0.8rem] leading-relaxed text-[var(--color-ink-faint)]">
+                {pulse.usdcUnblocked === 0
+                  ? `None of them can be filled — every one is collateralised in an Aave aToken, and the OptionBook reverts on those. ${pulse.unblocked} other buyable orders, paid in a plain token, clear that check.`
+                  : `${pulse.usdcUnblocked} of them can be filled. The rest are collateralised in an Aave aToken, which the OptionBook reverts on.`}
               </p>
               <div className="mt-5 space-y-2">
                 {pulse.byUnderlying.map((row) => (
