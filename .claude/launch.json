@@ -5,7 +5,13 @@
       "name": "optionarena",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 5190
+      "port": 5190,
+      "autoPort": false
+    },
+    {
+      "name": "optionarena-attach",
+      "port": 5190,
+      "url": "http://localhost:5190"
     }
   ]
 }
