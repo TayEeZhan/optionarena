@@ -2,6 +2,8 @@ import 'server-only';
 
 import { signingClient, canSign, explorerTx, maxTradeUsdc, chainConfig } from '../thetanuts/client';
 import { assertMagnitude, formatUnits, fromUnits, toUnits } from '../thetanuts/decimals';
+import { fetchSpot, isAToken } from '../thetanuts/book';
+import { usdValueOf } from '../thetanuts/budget';
 import type { Instrument } from '../thetanuts/book';
 import type { Quote } from '../thetanuts/quote';
 
@@ -58,18 +60,22 @@ export async function execute(
     );
   }
 
-  // Physically settled contracts revert. Confirmed twice: `Panic(0x11)` from
-  // the OptionBook across 62 orders, nine sizes and three RPCs, and then by the
-  // Thetanuts team, who said physical settlement is not routed into the SDK
-  // yet. Refusing here means the app never broadcasts a transaction we already
-  // know fails. Demo mode is untouched, so step 02 still prices these and shows
-  // a real maximum loss. See docs/decisions.md sections 14 and 15.
-  if (instrument.isPhysical) {
+  // Orders collateralised in an Aave aToken revert with `Panic(0x11)` inside
+  // the OptionBook. This used to test `isPhysical`, which was the wrong cause:
+  // cbBTC orders are physically settled too and they fill arithmetic fine. The
+  // controlled test on 6 Sep 2026 held the option implementation constant —
+  // aBasWETH and cbBTC share `0x8c56100c...` — and only the aToken failed.
+  // Refusing here means the app never broadcasts a transaction we already know
+  // fails. Demo mode is untouched, so step 02 still prices these and shows a
+  // real maximum loss. See docs/decisions.md sections 14, 15 and 16.
+  if (isAToken(instrument)) {
     throw new ExecutionRefused(
-      `${instrument.structure} contracts cannot be filled yet. Physical settlement ` +
-        `is not routed into the Thetanuts SDK, and the OptionBook reverts with an ` +
-        `arithmetic overflow. The prices and the maximum loss above are real; only ` +
-        `the signature is unavailable.`,
+      `Contracts collateralised in ${instrument.collateral.symbol} cannot be filled. ` +
+        `The OptionBook reverts with an arithmetic overflow on Aave aToken collateral, ` +
+        `which is a break inside Thetanuts' contract rather than anything about this ` +
+        `order. The prices and the maximum loss above are real; only the signature is ` +
+        `unavailable. Contracts paid in a plain token, such as the BTC calls in cbBTC, ` +
+        `do fill.`,
     );
   }
 
@@ -77,11 +83,24 @@ export async function execute(
   const client = signingClient();
 
   // The whole point of the ceiling is that the first run of any path is small.
+  // The ceiling is a DOLLAR figure, so the comparison has to be in dollars.
+  // Comparing it against the bare budget only worked while every buyable order
+  // was USDC-priced: a budget of 1 against a cbBTC order is one bitcoin, which
+  // sails under a ceiling of 25 and spends eighty thousand dollars.
   const ceiling = maxTradeUsdc();
-  if (budget > ceiling) {
+  const worth = usdValueOf(budget, instrument, await fetchSpot().catch(() => ({})));
+  if (worth === null) {
     throw new ExecutionRefused(
-      `This trade is ${budget} ${symbol}, above the ${ceiling} ceiling set by ` +
-        `MAX_TRADE_USDC. Raise the ceiling deliberately if that is really intended.`,
+      `This trade is denominated in ${symbol}, and the ${instrument.underlying} spot ` +
+        `price needed to check it against the ${ceiling} MAX_TRADE_USDC ceiling is ` +
+        `unavailable. Refusing rather than trading an unchecked size.`,
+    );
+  }
+  if (worth > ceiling) {
+    throw new ExecutionRefused(
+      `This trade is ${budget} ${symbol}, worth about ${worth.toFixed(2)} dollars, above ` +
+        `the ${ceiling} ceiling set by MAX_TRADE_USDC. Raise the ceiling deliberately if ` +
+        `that is really intended.`,
     );
   }
 
@@ -157,8 +176,22 @@ export async function dryRun(
     checks.push('Signing key present');
 
     const ceiling = maxTradeUsdc();
-    if (budget > ceiling) throw new ExecutionRefused(`Budget ${budget} above ceiling ${ceiling}.`);
-    checks.push(`Budget ${budget} ${symbol} within the ${ceiling} ceiling`);
+    // Dollars, for the same reason the signing path does it in dollars.
+    const worth = usdValueOf(budget, instrument, await fetchSpot().catch(() => ({})));
+    if (worth === null) {
+      throw new ExecutionRefused(
+        `No ${instrument.underlying} spot price, so a ${symbol} budget cannot be checked ` +
+          `against the ${ceiling} ceiling.`,
+      );
+    }
+    if (worth > ceiling)
+      throw new ExecutionRefused(
+        `Budget ${budget} ${symbol} is worth about ${worth.toFixed(2)} dollars, above the ` +
+          `${ceiling} ceiling.`,
+      );
+    checks.push(
+      `Budget ${budget} ${symbol} (about ${worth.toFixed(2)} dollars) within the ${ceiling} ceiling`,
+    );
 
     const spend = quote.premium;
     assertMagnitude(spend, budget, decimals, `Trade size in ${symbol}`);
@@ -196,6 +229,15 @@ export async function dryRun(
         ? 'OptionBook already approved for this size'
         : 'OptionBook approval needed, would be requested before filling',
     );
+
+    // Say what the revert will be before it happens, so the dump below is read
+    // as a confirmed cause rather than a mystery.
+    if (isAToken(instrument)) {
+      checks.push(
+        `WARNING ${symbol} is an Aave aToken; the OptionBook overflows on these. ` +
+          `A plain-token order, such as a BTC call in cbBTC, is the one that fills.`,
+      );
+    }
 
     const simulation = await client.optionBook.callStaticFillOrder(instrument.raw, spend);
     if (!simulation.success) {
