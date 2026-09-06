@@ -124,3 +124,19 @@ ranking causes. The first diagnosis here was "probably no credit, top up $5";
 the log said `temperature` is deprecated. The key and the balance were fine the
 whole time. A ranked guess offered ahead of available evidence reads as a
 finding and gets acted on — expand the log row first.
+
+## 12. The app knowing something is not the same as the app saying it
+
+`BalanceCard` displayed 1.00 aBasUSDC while `WalletTrade` asked the same person
+to approve a 5.00 trade. Both were correct in isolation. The bug lived in the
+gap: no code path carried what one component knew into the decision the other
+was making.
+
+Before any irreversible step, ask what the app already knows that the person is
+about to find out the hard way — and check it there, not somewhere else on the
+page.
+
+Corollary on ordering: a pre-flight that runs after an approval has been signed
+is not a pre-flight. `eth_sendTransaction` resolves on broadcast, so "the
+previous step finished" and "the previous step is on-chain" are different
+claims, and only one of them is safe to build on.
