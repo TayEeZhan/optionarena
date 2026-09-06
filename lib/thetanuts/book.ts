@@ -171,6 +171,25 @@ export function isUsdcCollateral(instrument: Instrument): boolean {
 }
 
 /**
+ * True when the collateral is an Aave interest-bearing token.
+ *
+ * **This, not physical settlement, is what makes a fill revert.** Measured on
+ * 6 Sep 2026 against the live book: the same fill calldata panics with
+ * `Panic(0x11)` for aBasUSDC and aBasWETH, and for cbBTC clears every
+ * arithmetic step to fail only on the ERC-20 allowance. aBasWETH and cbBTC
+ * share one option implementation (`0x8c56100c...`) and behave oppositely, so
+ * the collateral token is the variable — not the structure, the strike or the
+ * size. Sections 14 and 15 of `docs/decisions.md` previously blamed physical
+ * settlement; cbBTC orders are physically settled too, and they compute fine.
+ *
+ * Matched on the `aBas` prefix the SDK's own config uses, the same naming
+ * `underlyingOf` in `balance.ts` already depends on.
+ */
+export function isAToken(instrument: Instrument): boolean {
+  return instrument.collateral.symbol.startsWith('aBas');
+}
+
+/**
  * Orders the user can BUY.
  *
  * A buyer's maximum loss is the premium paid, which is the defined-risk promise

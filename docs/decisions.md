@@ -358,3 +358,55 @@ This is a question for the Thetanuts team, not a fix on our side. It is written
 up here rather than left as a gap, because the evidence is the point: the
 pre-flight check caught a reverting transaction before it was signed, which is
 exactly what that check exists to do.
+
+## 16. The overflow is the aToken, not physical settlement
+
+Sections 14 and 15 name physical settlement as the cause of `Panic(0x11)`. That
+is wrong, and the correction matters because it leaves a working buy path this
+app was refusing.
+
+**What was eliminated first.** The SDK setup is correct. The installed client is
+the latest published (0.3.0). The amount we pass is collateral in the collateral
+token's own decimals, exactly as `sdk/optionbook/fill-orders.md` specifies. The
+approval target is the OptionBook, as documented. `resolveOptionBookTarget(order)`
+returns the same address our config uses. Omitting the amount, which the docs
+offer as "fill the full available amount", panics identically — so it is not our
+sizing.
+
+The one real discrepancy was that `for-builders/executing-trades.md` hardcodes a
+different book, `0xd58b814C7Ce700f251722b5555e25aE0fa8169A1`. Sending our
+calldata there returns `"Signer not authorized"` — a clean `Error(string)`, not
+a panic. That book parsed our calldata and validated the maker signature before
+rejecting it, which proves it is a separate live deployment with its own maker
+set, and that `0x1bDff855…` is the right book for these orders.
+
+**The controlled experiment**, 6 Sep 2026, same node, same calldata shape:
+
+| Collateral | Implementation | Result |
+|---|---|---|
+| aBasUSDC (Aave aToken) | `0x6aD53DD0…` | `Panic(0x11)` |
+| aBasWETH (Aave aToken) | `0x8c56100c…` | `Panic(0x11)` |
+| cbBTC (plain ERC-20) | `0x8c56100c…` — the same | clears all arithmetic, stops at `ERC20: transfer amount exceeds allowance` |
+
+aBasWETH and cbBTC share one option implementation and behave oppositely, so the
+**collateral token** is the variable — not the structure, the strike, the size or
+the implementation. Sizes from 200 units ($0.16) to 20,000 units ($16) all behave
+the same. cbBTC orders are physically settled too, and they compute fine.
+
+**Mechanism: a hypothesis, not a finding.** Aave aTokens rebase, so `balanceOf`
+grows continuously, and a contract asserting `balanceAfter - balanceBefore ==
+amount` underflows on exactly that. Plausible, worth reporting to Thetanuts, and
+not something we have read the bytecode to confirm.
+
+**There is no plain-USDC fallback on the buy side.** Of 352 resting orders, every
+plain-USDC one is a bid — the maker is buying, so we would be selling. Of the 125
+buyable offers: aBasUSDC 65, aBasWETH 26, cbBTC 34. cbBTC is the only buy-side
+collateral that is not an aToken.
+
+**The hazard this uncovered.** `fetchBuyable`'s `usdcOnly` default was doing more
+work than it looked. `MAX_TRADE_USDC` compared a bare number against a dollar
+ceiling, and `assertMagnitude` proves units match the typed number — so a budget
+of `1` against a cbBTC order passed both guards and would have spent one bitcoin.
+The ceiling is now evaluated in dollars via `usdValueOf`, and
+`budgetInCollateral` converts a dollar budget through spot, refusing outright
+when no spot price is available.
