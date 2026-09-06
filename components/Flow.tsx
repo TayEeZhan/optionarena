@@ -32,7 +32,7 @@ const RISKS: { value: RiskLevel; label: string; hint: string }[] = [
  */
 export function Flow({
   initialView = '',
-  initialBudget = 5,
+  initialBudget = 1,
 }: {
   initialView?: string;
   initialBudget?: number;

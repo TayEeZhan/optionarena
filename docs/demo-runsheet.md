@@ -204,6 +204,11 @@ Then do the three clicks, without hurrying:
 
 3. **Click "Interpret my view."** Land on a real quote for that expiry.
 
+**Type 5 in Maximum spend before you click through.** The box now starts at 1,
+which is what the demo wallet actually holds. The beat below was verified at a
+budget of 5 and only reproduces there — at 1 the agent may pick a different
+strike for a different reason, and the quote would no longer be what happened.
+
 **If the agent picks a different strike from the sourced trade, point at it.**
 That is the strongest thirty seconds available to you, not a stumble. Asked for
 a 2,350 put on a 5 budget it returned the 2,300, and said why: *"The 2,350
