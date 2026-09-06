@@ -10,6 +10,9 @@ import {
   type ReactNode,
 } from 'react';
 
+import { formatUnits } from '@/lib/thetanuts/decimals';
+import { decodeRevert, revertDataOf } from '@/lib/wallet/revert';
+
 /**
  * The visitor's own wallet, when they choose to connect one.
  *
@@ -54,7 +57,24 @@ interface WalletContext {
   provider: () => Eip1193 | null;
   /** The connected account's balance of one token, or null if unreadable. */
   readBalance: (token: string, decimals: number) => Promise<string | null>;
+  /** The same balance in raw units, for comparing against an amount to spend. */
+  readBalanceUnits: (token: string) => Promise<bigint | null>;
+  /** How much of a token a spender may already take, in raw units. */
+  readAllowance: (token: string, spender: string) => Promise<bigint | null>;
+  /** Run a call without sending it, to learn whether it would revert. */
+  simulate: (to: string, data: string) => Promise<Simulation>;
+  /** Wait for a broadcast transaction to be mined. */
+  waitForReceipt: (hash: string, timeoutMs?: number) => Promise<Receipt>;
 }
+
+/** What a dry run of a transaction found. */
+export type Simulation =
+  | { ok: true }
+  /** `reason` is already in plain words; null means it could not be decoded. */
+  | { ok: false; reason: string | null };
+
+/** How a broadcast transaction ended, or that we stopped waiting. */
+export type Receipt = { status: 'success' } | { status: 'failed' } | { status: 'timeout' };
 
 const Context = createContext<WalletContext | null>(null);
 
@@ -69,6 +89,11 @@ export function readableWalletError(error: unknown): string {
   if (code === 4001) return 'You rejected the request in your wallet.';
   if (code === -32002)
     return 'Your wallet already has a pending request. Open it and finish there.';
+
+  // A revert carries its own reason. Without this the person sees the RPC's
+  // "execution reverted" and has to guess what the contract objected to.
+  const reverted = decodeRevert(revertDataOf(error));
+  if (reverted) return `The contract rejected it: ${reverted}.`;
 
   const message = (error as { message?: string })?.message;
   return message ? message : 'Your wallet refused the request.';
@@ -109,25 +134,13 @@ function subscribeToWallet(onChange: () => void): () => void {
   };
 }
 
-/**
- * Units to a display string, without pulling ethers into the browser bundle.
- *
- * Integer maths on the string, because a token amount that goes through a
- * JavaScript number is the bug `lib/thetanuts/decimals.ts` exists to prevent.
- */
-function formatUnitsString(units: bigint, decimals: number, places = 2): string {
-  const negative = units < 0n;
-  const digits = (negative ? -units : units).toString().padStart(decimals + 1, '0');
-  const whole = digits.slice(0, digits.length - decimals);
-  const fraction = decimals > 0 ? digits.slice(digits.length - decimals) : '';
-
-  const shown = fraction.slice(0, places).padEnd(places, '0');
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-  return `${negative ? '-' : ''}${grouped}${places > 0 ? '.' + shown : ''}`;
-}
-
 const BALANCE_OF = '0x70a08231';
+const ALLOWANCE = '0xdd62ed3e';
+
+/** An address as one 32-byte ABI word. */
+function asWord(address: string): string {
+  return address.replace(/^0x/, '').toLowerCase().padStart(64, '0');
+}
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<string | null>(null);
@@ -239,22 +252,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const readBalance = useCallback(
-    async (token: string, decimals: number) => {
+  const readBalanceUnits = useCallback(
+    async (token: string) => {
       const eth = injected();
       if (!eth || !account) return null;
 
       try {
         // A plain balanceOf call. The wallet is already an RPC connection, so
         // asking it a public question needs no server round trip.
-        const data = `${BALANCE_OF}${account.replace(/^0x/, '').toLowerCase().padStart(64, '0')}`;
+        const data = `${BALANCE_OF}${asWord(account)}`;
         const raw = (await eth.request({
           method: 'eth_call',
           params: [{ to: token, data }, 'latest'],
         })) as string;
 
         if (!raw || raw === '0x') return null;
-        return formatUnitsString(BigInt(raw), decimals);
+        return BigInt(raw);
       } catch {
         // Unreadable is not zero, and the interface has to be able to tell
         // those apart.
@@ -263,6 +276,90 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     },
     [account],
   );
+
+  const readAllowance = useCallback(
+    async (token: string, spender: string) => {
+      const eth = injected();
+      if (!eth || !account) return null;
+
+      try {
+        const raw = (await eth.request({
+          method: 'eth_call',
+          params: [
+            { to: token, data: `${ALLOWANCE}${asWord(account)}${asWord(spender)}` },
+            'latest',
+          ],
+        })) as string;
+
+        if (!raw || raw === '0x') return null;
+        return BigInt(raw);
+      } catch {
+        return null;
+      }
+    },
+    [account],
+  );
+
+  const readBalance = useCallback(
+    async (token: string, decimals: number) => {
+      const units = await readBalanceUnits(token);
+      return units === null ? null : formatUnits(units, decimals);
+    },
+    [readBalanceUnits],
+  );
+
+  /**
+   * Ask the chain what would happen, without asking the person to sign.
+   *
+   * This is the browser's version of the server path's `callStaticFillOrder`.
+   * Without it the first sign of trouble is MetaMask's own "likely to fail",
+   * which arrives after an approval has already cost gas and explains nothing.
+   */
+  const simulate = useCallback(
+    async (to: string, data: string): Promise<Simulation> => {
+      const eth = injected();
+      if (!eth || !account) return { ok: false, reason: null };
+
+      try {
+        await eth.request({ method: 'eth_call', params: [{ from: account, to, data }, 'latest'] });
+        return { ok: true };
+      } catch (failure) {
+        return { ok: false, reason: decodeRevert(revertDataOf(failure)) };
+      }
+    },
+    [account],
+  );
+
+  /**
+   * Wait for a transaction to be mined.
+   *
+   * `eth_sendTransaction` resolves when a transaction is *broadcast*, not when
+   * it lands. Sending the fill on that promise means it can reach the book
+   * before the approval it depends on, and fail for a reason that has nothing
+   * to do with the trade.
+   */
+  const waitForReceipt = useCallback(async (hash: string, timeoutMs = 60_000): Promise<Receipt> => {
+    const eth = injected();
+    if (!eth) return { status: 'timeout' };
+
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      try {
+        const receipt = (await eth.request({
+          method: 'eth_getTransactionReceipt',
+          params: [hash],
+        })) as { status?: string } | null;
+
+        if (receipt) return { status: receipt.status === '0x1' ? 'success' : 'failed' };
+      } catch {
+        // A transient RPC failure is not an answer about the transaction.
+        // Keep waiting; the deadline is what ends this.
+      }
+      await new Promise((resume) => setTimeout(resume, 1500));
+    }
+
+    return { status: 'timeout' };
+  }, []);
 
   return (
     <Context.Provider
@@ -278,6 +375,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         ensureBase,
         provider: injected,
         readBalance,
+        readBalanceUnits,
+        readAllowance,
+        simulate,
+        waitForReceipt,
       }}
     >
       {children}
