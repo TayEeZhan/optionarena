@@ -36,7 +36,7 @@ export default async function TradePage({
 
       <Flow
         initialView={params.view ?? ''}
-        initialBudget={Number.isFinite(budget) && budget > 0 ? budget : 5}
+        initialBudget={Number.isFinite(budget) && budget > 0 ? budget : 1}
       />
 
       <section className="space-y-4">
